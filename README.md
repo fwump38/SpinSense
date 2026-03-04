@@ -1,32 +1,28 @@
-# SpinSense
+# 💿 SpinSense
 Integrate your analogue record player into your digital life. This tool uses audio recognition and MQTT to create a media player entity for Home Assistant to show the song currently spinning on your turntable. 
 
-💿 SpinSense
-Analogue Soul. Digital Brain.
+## ✨ Features
+- Automatic ID: Powered by songrec (Shazam-compatible) for high-accuracy track recognition.
 
-SpinSense is a vibecoded bridge between your turntable and your smart home. It listens to the music in your room, identifies the track spinning on your platter, and broadcasts the metadata to Home Assistant via MQTT—turning your vintage setup into a fully integrated Media Player entity.
+- Zero-Config Discovery: Automatically appears in Home Assistant as a media_player via MQTT Discovery.
 
-✨ Features
-Automatic ID: Powered by songrec (Shazam-compatible) for high-accuracy track recognition.
+- Multi-Arch Ready: Runs natively on Raspberry Pi (ARM) near your deck or on your main NAS (x64).
 
-Zero-Config Discovery: Automatically appears in Home Assistant as a media_player via MQTT Discovery.
+- Guided Onboarding: A built-in Web GUI to help you calibrate your "Silence vs. Music" thresholds.
 
-Multi-Arch Ready: Runs natively on Raspberry Pi (ARM) near your deck or on your main NAS (x64).
+## 🚀 How It Works
+- SpinSense doesn't just "guess." It monitors the RMS volume of your input device. When the needle drops:
 
-Guided Onboarding: A built-in Web GUI to help you calibrate your "Silence vs. Music" thresholds.
+  - Detection: It identifies a rise in volume above your calibrated THRESHOLD.
 
-🚀 How It Works
-SpinSense doesn't just "guess." It monitors the RMS volume of your input device. When the needle drops:
+  - Recognition: It captures a 10-second high-fidelity sample and identifies it.
 
-Detection: It identifies a rise in volume above your calibrated THRESHOLD.
+  - Communication: It publishes the Artist, Album, and Title to your MQTT Broker.
 
-Recognition: It captures a 10-second high-fidelity sample and identifies it.
+  - Silence Logic: When the side ends or the record is stopped, it waits for a SILENCE_LIMIT before marking the player as Stopped.
 
-Communication: It publishes the Artist, Album, and Title to your MQTT Broker.
+## 🛠 Project Structure
 
-Silence Logic: When the side ends or the record is stopped, it waits for a SILENCE_LIMIT before marking the player as Stopped.
-
-🛠 Project Structure
 This project is built to be modular and Docker-first:
 
 /core: The Python-based recognition engine.
@@ -35,5 +31,5 @@ This project is built to be modular and Docker-first:
 
 /docker: Multi-arch build files for Pi and NAS compatibility.
 
-🏗 Installation (Coming Soon)
+## 🏗 Installation (Coming Soon)
 
