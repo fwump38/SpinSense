@@ -3,6 +3,9 @@ import asyncio
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 import uvicorn
+from fastapi import Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from config_manager import load_config, save_config
 from audio_utils import get_audio_devices
@@ -21,6 +24,8 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 app = FastAPI(title="SpinSense Web GUI API", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 # --- REST API Endpoints (From Phase 1) ---
 @app.get("/api/health")
@@ -53,5 +58,10 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+@app.get("/")
+def serve_dashboard(request: Request):
+    """Serves the main HTML dashboard."""
+    return templates.TemplateResponse("index.html", {"request": request})
+
 if __name__ == "__main__":
-    uvicorn.run("backend_main:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("backend_main:app", host="0.0.0.0", port=8000, reload=True)
