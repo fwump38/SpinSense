@@ -49,7 +49,7 @@ class SpinSenseConfig(BaseModel):
 # --- Core Functions ---
 def get_default_config() -> dict:
     """Returns the default configuration as a dictionary."""
-    return SpinSenseConfig().model_dump()
+    return SpinSenseConfig().dict()
 
 def load_config() -> dict:
     """Loads config.json. Recreates it with defaults if missing or invalid."""
@@ -61,7 +61,7 @@ def load_config() -> dict:
             data = json.load(f)
             # Passing data to SpinSenseConfig validates the types automatically
             validated = SpinSenseConfig(**data)
-            return validated.model_dump()
+            return validated.dict()
     except Exception as e:
         print(f"⚠️ Error loading config, regenerating defaults: {e}")
         defaults = get_default_config()
@@ -73,7 +73,7 @@ def save_config(data: dict) -> bool:
     try:
         validated = SpinSenseConfig(**data)
         with open(CONFIG_PATH, 'w') as f:
-            json.dump(validated.model_dump(), f, indent=2)
+            json.dump(validated.dict(), f, indent=2)
         return True
     except Exception as e:
         print(f"❌ Error saving config (Validation failed): {e}")

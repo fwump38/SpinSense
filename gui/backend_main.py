@@ -1,87 +1,119 @@
-# gui/backend_main.py
 import asyncio
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+import json
+import os
 from contextlib import asynccontextmanager
-import uvicorn
-from fastapi import Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+import sounddevice as sd
 
 from config_manager import load_config, save_config
-from audio_utils import get_audio_devices
-from ipc_manager import manager, mock_core_engine_stream
 
-# We use lifespan to start our background tasks when FastAPI boots
+# This set holds all connected web browsers
+active_websockets = set()
+
+async def uds_server_callback(reader, writer):
+    """Reads socket data from Core Engine and broadcasts to WebSockets."""
+    try:
+        data = await reader.readline()
+        if data:
+            payload = data.decode('utf-8')
+            # Broadcast this payload to every open browser tab
+            dead_sockets = set()
+            for ws in active_websockets:
+                try:
+                    await ws.send_text(payload)
+                except Exception:
+                    dead_sockets.add(ws)
+            # Clean up disconnected browsers
+            active_websockets.difference_update(dead_sockets)
+    except Exception as e:
+        print(f"Socket read error: {e}")
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+async def start_uds_listener():
+    """Starts the Unix Domain Socket server."""
+    socket_path = '/tmp/spinsense.sock'
+    if os.path.exists(socket_path):
+        os.remove(socket_path)
+        
+    server = await asyncio.start_unix_server(uds_server_callback, path=socket_path)
+    print(f"🎧 Now listening for Core Engine on {socket_path}")
+    
+    async with server:
+        await server.serve_forever()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start the mock data generator so we have volume data for the UI
-    task = asyncio.create_task(mock_core_engine_stream())
-    
-    # Future: When the Core is ready, we will swap the mock task with this:
-    # server = await asyncio.start_unix_server(handle_uds_client, '/tmp/spinsense.sock')
-    
+    # Boot up the UDS listener in the background
+    task = asyncio.create_task(start_uds_listener())
     yield
     task.cancel()
 
-app = FastAPI(title="SpinSense Web GUI API", lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
+
+# Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# --- REST API Endpoints (From Phase 1) ---
-@app.get("/api/health")
-def health_check():
-    return {"status": "ok", "message": "SpinSense backend is running."}
+# --- Routes ---
+
+@app.get("/")
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/api/config")
 def get_config():
     return load_config()
 
 @app.post("/api/config")
-def update_config(new_config: dict):
-    success = save_config(new_config)
-    if not success:
-        raise HTTPException(status_code=400, detail="Invalid config format.")
+async def update_config(request: Request):
+    new_config = await request.json()
+    save_config(new_config)
     return {"status": "success"}
+
+@app.get("/api/devices")
+def get_audio_devices():
+    """Returns mic devices as objects so the frontend JS can read them."""
+    try:
+        devices = sd.query_devices()
+        # Create a list of dictionaries with a 'name' key
+        mics = [{"name": d['name']} for d in devices if d['max_input_channels'] > 0]
+        # Remove duplicates
+        unique_mics = list({m['name']: m for m in mics}.values())
+        return {"devices": unique_mics}
+    except Exception as e:
+        print(f"Error querying devices: {e}")
+        return {"devices": []}
 
 @app.post("/api/engine/start")
 def start_engine():
-    """Sets Auto_Start to true and updates Engine Status."""
     config = load_config()
     config["System"]["Auto_Start"] = True
     config["System"]["Engine_Status"] = "active"
     save_config(config)
-    # Note: In the final integration, this will also send a wake-up signal via UDS
-    return {"status": "success", "message": "Engine started"}
+    return {"status": "success"}
 
 @app.post("/api/engine/stop")
 def stop_engine():
-    """Sets Auto_Start to false and updates Engine Status."""
     config = load_config()
     config["System"]["Auto_Start"] = False
     config["System"]["Engine_Status"] = "stopped"
     save_config(config)
-    # Note: In the final integration, this will also send a halt signal via UDS
-    return {"status": "success", "message": "Engine stopped"}
+    return {"status": "success"}
 
-@app.get("/api/devices")
-def list_devices():
-    return {"devices": get_audio_devices()}
+# --- The Missing WebSocket Route ---
 
-# --- WebSockets (New in Phase 2) ---
 @app.websocket("/ws/live-status")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+    """Handles real-time WebSocket connection from the browser."""
+    await websocket.accept()
+    active_websockets.add(websocket)
     try:
         while True:
-            # We just keep the connection open. The server pushes data to the client.
-            await websocket.receive_text() 
+            # Keep the connection alive
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
-@app.get("/")
-def serve_dashboard(request: Request):
-    """Serves the main HTML dashboard."""
-    return templates.TemplateResponse("index.html", {"request": request})
-
-if __name__ == "__main__":
-    uvicorn.run("backend_main:app", host="0.0.0.0", port=8000, reload=True)
+        active_websockets.remove(websocket)
