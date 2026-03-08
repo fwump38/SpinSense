@@ -14,10 +14,10 @@
   },
   "MQTT": {
     "Broker": {
-      "Host": "192.168.1.100",
+      "Host": "192.168.20.101",
       "Port": 1883,
-      "User": "",
-      "Password": ""
+      "User": "spinsense",
+      "Password": "1234567890"
     },
     "Discovery": {
       "Enabled": true,

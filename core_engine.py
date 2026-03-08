@@ -8,6 +8,7 @@ import aiohttp
 import numpy as np
 import sounddevice as sd
 import paho.mqtt.client as mqtt
+import base64
 from shazamio import Shazam
 
 # --- 1. Load Configuration ---
@@ -32,9 +33,10 @@ BASE_TOPIC = "home/vinyl"
 TOPIC_STATE = f"{BASE_TOPIC}/state"
 TOPIC_TITLE = f"{BASE_TOPIC}/title"
 TOPIC_ARTIST = f"{BASE_TOPIC}/artist"
+TOPIC_ALBUM = f"{BASE_TOPIC}/album"
 TOPIC_ARTART = f"{BASE_TOPIC}/album_art"
 LEGACY_TOPIC = f"{BASE_TOPIC}/now_playing"
-DISCOVERY_TOPIC = "homeassistant/media_player/vinyl_pi/config"
+DISCOVERY_TOPIC = "homeassistant/media_player/spinsense/config"
 
 # --- 2. MQTT Setup ---
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -42,37 +44,52 @@ if MQTT_USER and MQTT_PASS:
     mqtt_client.username_pw_set(MQTT_USER, MQTT_PASS)
 
 MQTT_ENABLED = False
-print(f"Attempting to connect to MQTT at {MQTT_HOST}...")
+print(f"Attempting to connect to MQTT at {MQTT_HOST}:{MQTT_PORT}...")
 try:
-    mqtt_client.connect(MQTT_HOST, MQTT_PORT, 3) 
+    # Set to 60 for stable, long-term connection
+    mqtt_client.connect(MQTT_HOST, MQTT_PORT, 60) 
     mqtt_client.loop_start()
     MQTT_ENABLED = True
     print("✅ MQTT Connected!")
 except Exception as e:
+    print(f"⚠️ MQTT Connection Failed: {e}")
     print("⚠️ Running in OFFLINE TESTING MODE (MQTT messages will print to console).")
 
 def announce_to_ha():
     payload = {
         "name": "Vinyl Record Player",
-        "unique_id": "vinyl_pi_record_player",
+        "unique_id": "SpinSense",  # Crucial for HA to register the entity
         "device_class": "speaker",
-        "state_topic": TOPIC_STATE, 
-        "json_attributes_topic": LEGACY_TOPIC, 
+        "state_state_topic": TOPIC_STATE,
+        "state_title_topic": TOPIC_TITLE,
+        "state_artist_topic": TOPIC_ARTIST,
+        "state_album_topic": TOPIC_ALBUM,
+        "state_albumart_topic": TOPIC_ARTART,
         "payload_play": "playing",
         "payload_stop": "stopped",
         "payload_idle": "idle"
     }
     if MQTT_ENABLED:
         mqtt_client.publish(DISCOVERY_TOPIC, json.dumps(payload), retain=True)
+        print("📡 Sent HACS Auto-Discovery Payload (with unique_id).")
 
-def publish_state(status, artist="", title="", album="", art_url=""):
+def publish_state(status, artist="", title="", album="", art_url="", art_base64=""):
     if MQTT_ENABLED:
         mqtt_client.publish(TOPIC_STATE, status, retain=True)
         mqtt_client.publish(TOPIC_TITLE, title, retain=True)
         mqtt_client.publish(TOPIC_ARTIST, artist, retain=True)
-        mqtt_client.publish(TOPIC_ARTART, art_url, retain=True)
+        mqtt_client.publish(TOPIC_ALBUM, album, retain=True)
+        
+        # Publish base64 image data if available, otherwise clear it
+        if art_base64:
+            mqtt_client.publish(TOPIC_ARTART, art_base64, retain=True)
+        else:
+            mqtt_client.publish(TOPIC_ARTART, "", retain=True)
+            
+        # Retain the legacy JSON payload for your Web GUI / original sensors
         payload = json.dumps({"status": status, "artist": artist, "title": title, "album": album, "art_url": art_url})
         mqtt_client.publish(LEGACY_TOPIC, payload, retain=True)
+        print(f"📡 Published State -> Status: {status.upper()} | {artist} - {title}")
     else:
         print(f"[MOCK MQTT] Published State -> Status: {status.upper()} | {artist} - {title}")
 
@@ -109,6 +126,20 @@ async def fetch_itunes_metadata(artist, title):
         print(f"⚠️ iTunes API error: {e}")
     return None, None
 
+async def fetch_image_base64(url):
+    """Downloads the image URL and converts it to a base64 string for HA."""
+    if not url:
+        return ""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    img_bytes = await response.read()
+                    return base64.b64encode(img_bytes).decode('utf-8')
+    except Exception as e:
+        print(f"⚠️ Failed to encode album art to base64: {e}")
+    return ""
+
 async def recognize_audio():
     print(f"\n[!] Music detected. Recording {SAMPLE_LEN}s for identification...")
     recording = sd.rec(int(SAMPLE_LEN * 48000), samplerate=48000, channels=1, dtype='int16', device=MIC_DEVICE)
@@ -137,6 +168,12 @@ async def recognize_audio():
             art_url = track.get('images', {}).get('coverarthq', track.get('images', {}).get('coverart', ''))
         if not album:
             album = "Unknown Album"
+
+        # Download and encode the image for Home Assistant
+        art_base64 = ""
+        if art_url:
+            print("[!] Encoding album art to Base64 for Home Assistant...")
+            art_base64 = await fetch_image_base64(art_url)
             
         result_str = f"{artist} - {title}"
         
@@ -152,11 +189,11 @@ async def recognize_audio():
             print(f"🖼️  Art URL:   {art_url}")
             publish_state("stopped")
             await asyncio.sleep(0.5)
-            publish_state("playing", artist, title, album, art_url)
+            publish_state("playing", artist, title, album, art_url, art_base64)
             state["last_song"] = result_str
         else:
             print(f"      (Confirmed same track: {state['last_song']})")
-            publish_state("playing", artist, title, album, art_url)
+            publish_state("playing", artist, title, album, art_url, art_base64)
             
         state["in_song"] = True
     else:
