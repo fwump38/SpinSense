@@ -9,7 +9,8 @@ services:
     # --- COMMENTED OUT FOR MAC TESTING ---
     devices:
      - "/dev/snd:/dev/snd"
-  
+    group_add:
+      - "29"
     ipc: host
 
 
