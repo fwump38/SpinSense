@@ -209,59 +209,71 @@ async def audio_monitor_loop():
         rms = np.sqrt(np.mean(indata**2))
         state["current_rms"] = float(rms)
 
+    # Instantiate and start the stream manually (no 'with' block)
     stream = sd.InputStream(samplerate=48000, channels=1, callback=audio_callback, device=MIC_DEVICE)
-    with stream:
-        while True:
-            vol = state["current_rms"]
-            
-            try:
-                if os.path.exists('/tmp/spinsense.sock'):
-                    reader, writer = await asyncio.open_unix_connection('/tmp/spinsense.sock')
-                    payload = json.dumps({
-                        "type": "live_status",
-                        "payload": {
-                            "rms_level": vol,
-                            "engine_active": True,
-                            "status_msg": "Playing" if state["in_song"] else "Listening",
-                            "track": {
-                                "title": state.get("title", ""),
-                                "artist": state.get("artist", ""),
-                                "album": state.get("album", ""),
-                                "art_url": state.get("art_url", "")
-                            }
+    stream.start()
+    
+    while True:
+        vol = state["current_rms"]
+        
+        try:
+            if os.path.exists('/tmp/spinsense.sock'):
+                reader, writer = await asyncio.open_unix_connection('/tmp/spinsense.sock')
+                payload = json.dumps({
+                    "type": "live_status",
+                    "payload": {
+                        "rms_level": vol,
+                        "engine_active": True,
+                        "status_msg": "Playing" if state["in_song"] else "Listening",
+                        "track": {
+                            "title": state.get("title", ""),
+                            "artist": state.get("artist", ""),
+                            "album": state.get("album", ""),
+                            "art_url": state.get("art_url", "")
                         }
-                    }) + "\n"
-                    writer.write(payload.encode())
-                    await writer.drain()
-                    writer.close()
-                    await writer.wait_closed()
-            except Exception:
-                pass 
-            
-            if vol > THRESHOLD:
-                if not state["in_song"] or state["silence_counter"] > 0:
-                    stream.stop()
-                    await recognize_audio()
-                    stream.start()
-                else:
-                    print(".", end="", flush=True)
+                    }
+                }) + "\n"
+                writer.write(payload.encode())
+                await writer.drain()
+                writer.close()
+                await writer.wait_closed()
+        except Exception:
+            pass 
+        
+        if vol > THRESHOLD:
+            if not state["in_song"] or state["silence_counter"] > 0:
+                # 1. Stop AND close the stream to release the ALSA lock
+                stream.stop()
+                stream.close()
+                
+                # 2. Record using Shazam
+                await recognize_audio()
+                
+                # 3. Re-grab the hardware lock and restart listening
+                stream = sd.InputStream(samplerate=48000, channels=1, callback=audio_callback, device=MIC_DEVICE)
+                stream.start()
+                
+                # Reset RMS so we don't instantly trigger a false positive right after returning
+                state["current_rms"] = 0.0 
             else:
-                if state["in_song"]:
-                    state["silence_counter"] += 1
-                    print("s", end="", flush=True)
+                print(".", end="", flush=True)
+        else:
+            if state["in_song"]:
+                state["silence_counter"] += 1
+                print("s", end="", flush=True)
+                
+                if state["silence_counter"] >= SILENCE_LIMIT:
+                    print(f"\n[ STOPPED ] {SILENCE_LIMIT}s silence limit reached.")
+                    publish_state("stopped")
+                    state["in_song"] = False
+                    state["last_song"] = ""
+                    state["artist"] = ""
+                    state["title"] = ""
+                    state["album"] = ""
+                    state["art_url"] = ""
+                    state["silence_counter"] = 0
                     
-                    if state["silence_counter"] >= SILENCE_LIMIT:
-                        print(f"\n[ STOPPED ] {SILENCE_LIMIT}s silence limit reached.")
-                        publish_state("stopped")
-                        state["in_song"] = False
-                        state["last_song"] = ""
-                        state["artist"] = ""
-                        state["title"] = ""
-                        state["album"] = ""
-                        state["art_url"] = ""
-                        state["silence_counter"] = 0
-                        
-            await asyncio.sleep(1)
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
     try:
