@@ -13,6 +13,7 @@ services:
       - "29"
     ipc: host
 
+    network_mode: host
 
     volumes:
       - ./config.json:/app/config.json
