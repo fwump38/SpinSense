@@ -1,0 +1,13 @@
+{
+    "name": "SpinSense",
+    "content_in_root": false,
+    "domains": [
+        "integration"
+    ],
+    "zip_release": false,
+    "filename": "custom_components/spinsense/manifest.json",
+    "render_readme": true,
+    "homeassistant": "2024.3.0",
+    "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
+    "documentation": "https://github.com/fwump38/SpinSense#readme"
+}

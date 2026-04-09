@@ -1,0 +1,10 @@
+calibrate_threshold:
+  name: Calibrate audio threshold
+  description: Start interactive threshold calibration with RMS meter feedback
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the media player to calibrate
+      selector:
+        entity:
+          domain: media_player

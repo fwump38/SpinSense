@@ -1,24 +1,42 @@
+version: '3.8'
+
 services:
   spinsense:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    
     container_name: spinsense_engine
     restart: unless-stopped
     
-    # --- COMMENTED OUT FOR MAC TESTING ---
+    # Audio device passthrough (required for USB audio input)
     devices:
-     - "/dev/snd:/dev/snd"
+      - "/dev/snd:/dev/snd"
+    
+    # Add to audio group to access sound devices
     group_add:
       - "29"
+    
+    # Use host IPC for ALSA audio (required for sound access)
     ipc: host
-
+    
+    # Use host network for MQTT communication
     network_mode: host
-
+    
+    # Mount configuration and temporary files
     volumes:
       - ./config.json:/app/config.json
       - /tmp:/tmp
-      
-    # Map Mac port 3313 to Container port 8000
-   # ports:
-    #  - "3313:8000"
+    
+    # Environment variables for configuration
+    environment:
+      - MQTT_HOST=${MQTT_HOST:-192.168.1.100}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_USER=${MQTT_USER:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-}
+      - AUDIO_THRESHOLD=${AUDIO_THRESHOLD:-0.015}
+      - AUDIO_SAMPLE_LENGTH=${AUDIO_SAMPLE_LENGTH:-5.0}
+      - AUDIO_SAMPLE_RATE=${AUDIO_SAMPLE_RATE:-48000}
+      - SILENCE_INTERVAL=${SILENCE_INTERVAL:-5.0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}

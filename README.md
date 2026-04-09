@@ -4,7 +4,9 @@ Integrate your analogue record player into your digital life. This tool uses aud
 ## ✨ Features
 - Automatic ID: Powered by songrec (Shazam-compatible) for high-accuracy track recognition.
 
-- Zero-Config Discovery: Automatically appears in Home Assistant as a media_player via MQTT Discovery.
+- MQTT-backed media player: Home Assistant receives track metadata via MQTT and exposes it as a media_player entity.
+
+- Separate Audio Engine: The HA custom integration consumes MQTT metadata, while the Pi Zero runs the audio recognition engine.
 
 - Multi-Arch Ready: Runs natively on Raspberry Pi (ARM) near your deck or on your main NAS (x64).
 
@@ -31,5 +33,21 @@ This project is built to be modular and Docker-first:
 
 /docker: Multi-arch build files for Pi and NAS compatibility.
 
-## 🏗 Installation (Coming Soon)
+## 🏗 Installation
+
+SpinSense includes both a standalone recognition engine and a Home Assistant custom integration:
+
+- `custom_components/spinsense/` is the HA custom integration.
+- `core_engine.py` is the standalone audio recognition engine.
+
+### Home Assistant Installation via HACS
+
+This repository is HACS-ready. To install it with HACS:
+
+1. In Home Assistant, open HACS.
+2. Go to `Integrations` → `+ Explore & add repositories`.
+3. Add this repository URL: `https://github.com/fwump38/SpinSense`.
+4. Install `SpinSense` from HACS and restart Home Assistant.
+
+For complete installation steps, see [INSTALLATION.md](INSTALLATION.md).
 
