@@ -4,7 +4,7 @@ services:
   spinsense:
     image: ghcr.io/fwump38/spinsense:latest
     
-    container_name: spinsense_engine
+    container_name: spinsense
     restart: unless-stopped
     
     # Audio device passthrough (required for USB audio input)

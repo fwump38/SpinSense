@@ -5,6 +5,14 @@ on:
     branches:
       - main
     tags: ["v*.*.*"]
+    paths:
+      - "requirements.txt"
+      - "core/**"
+      - "gui/**"
+      - "core_engine.py"
+      - "config.json"
+      - "docker/**"
+      - ".github/workflows/docker.yml"
   workflow_dispatch:
   release:
     types: [published]

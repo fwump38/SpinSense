@@ -30,8 +30,12 @@ COPY requirements.txt .
 # Use no-cache to reduce image size
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy everything from the main project folder
-COPY . .
+# Copy only the necessary application files
+COPY core/ ./core/
+COPY gui/ ./gui/
+COPY core_engine.py .
+COPY config.json .
+COPY docker/ ./docker/
 
 # Make sure entrypoint is executable
 RUN chmod +x ./docker/entrypoint.sh
