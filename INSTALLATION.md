@@ -37,31 +37,25 @@ This repository contains two complementary pieces:
 
 6. After setup, the `Vinyl Record Player` media player entity will appear in Home Assistant.
 
-## 2. Raspberry Pi Zero Standalone Engine (Docker)
+## 2. Standalone Engine (Docker) for single-board computers
 
-SpinSense is designed to run on Raspberry Pi Zero with a USB audio interface attached to the turntable.
+SpinSense can run on small ARM systems such as Raspberry Pi Zero 2W (or similar) with a USB audio interface attached to the turntable.
 
 ### Prerequisites
 
-- Raspberry Pi Zero W or Zero 2 W
-- Raspberry Pi OS or similar with Docker installed
-- USB audio interface connected to the Pi Zero
+- Single Board Computer like Raspberry Pi Zero 2W
+- Docker installed on the device
+- USB audio interface connected to the board
 - MQTT broker reachable on the network
 
 ### Quick start
 
-1. Copy `config.json` and `.env.example` into the project root.
-2. Rename `.env.example` to `.env` and update values.
+1. Copy `config.json` into the project root.
+2. Edit `config.json` with your MQTT broker settings and audio device options before building the image.
 3. Build the Docker image:
    ```bash
    docker compose build
    ```
-
-   If you are building directly on a Raspberry Pi Zero and your base image requires an ARMv6-compatible variant, use the build arg:
-   ```bash
-   docker compose build --build-arg PYTHON_BASE=arm32v6/python:3.11-slim-bullseye
-   ```
-
 4. Start the service:
    ```bash
    docker compose up -d
@@ -69,57 +63,37 @@ SpinSense is designed to run on Raspberry Pi Zero with a USB audio interface att
 
 ### Configuration
 
-The engine reads configuration from these sources:
+- `config.json` is the primary configuration source.
+- Edit `config.json` directly before building or running the container.
 
-- `config.json` in the project root
-- environment variables defined in `.env`
+Recommended fields to update:
 
-Recommended environment variables:
-
-- `MQTT_HOST`
-- `MQTT_PORT`
-- `MQTT_USER`
-- `MQTT_PASSWORD`
-- `AUDIO_DEVICE`
-- `AUDIO_SAMPLE_RATE`
-- `AUDIO_THRESHOLD`
-- `SILENCE_INTERVAL`
+- `MQTT.Broker.Host`
+- `MQTT.Broker.Port`
+- `MQTT.Broker.User`
+- `MQTT.Broker.Password`
+- `Audio.Volume_Threshold`
+- `Audio.Song_Sample_Length`
+- `Audio.New_Song_Silence_Interval`
+- `Audio.Stopped_Silence_Interval`
 
 ### Notes for Pi Zero
 
-- Use `AUDIO_SAMPLE_RATE=48000` if your USB audio interface supports it. If not, try `44100` or `16000`.
+- The Docker setup already exposes USB audio access via `/dev/snd` and host IPC.
+- Use a USB audio interface with a supported sample rate; `48000` is preferred if available.
+- If `48000` isn't supported, try `44100` or `16000`.
 - Connect a USB audio interface with an input device; the engine will auto-detect USB audio if `AUDIO_DEVICE` is blank.
 - Build times may be long on Pi Zero due to `numpy` and `sounddevice` compilation.
 
-## 3. Running Without Docker
-
-If you want to run the engine directly on the Pi Zero:
-
-1. Install system dependencies:
-   ```bash
-   sudo apt update
-   sudo apt install -y python3 python3-venv python3-pip portaudio19-dev libsndfile1 libffi-dev gcc g++ make
-   ```
-2. Create a virtual environment and install requirements:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-3. Run the engine:
-   ```bash
-   python3 core_engine.py
-   ```
-
-## 4. Recommended Setup
+## 3. Recommended Setup
 
 For the cleanest experience:
 
-- Run `core_engine.py` on the Raspberry Pi Zero as the recognition engine.
-- Install the Home Assistant custom integration in your HA instance.
-- Configure the engine to use the same MQTT broker that Home Assistant uses.
+- Use Docker to build and run the standalone recognition engine.
+- Run `core_engine.py` inside the container, with `config.json` mounted from the host.
+- Use the same MQTT broker that Home Assistant is configured to use.
 
-## 5. Troubleshooting
+## 4. Troubleshooting
 
 - If the engine cannot find your USB audio device, set `AUDIO_DEVICE` to the device name or use `AUDIO_DEVICE_INDEX`.
 - If Home Assistant does not show the `SpinSense` integration, confirm the `custom_components/spinsense/` folder is in your HA config directory and restart HA.

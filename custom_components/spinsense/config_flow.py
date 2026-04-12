@@ -1,20 +1,16 @@
 """Config flow for SpinSense integration."""
 
-import voluptuous as vol
-from typing import Any, Dict, Optional
+import json
 import logging
+from typing import Any, Dict, Optional
 
+import aiohttp
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import (
-    DOMAIN,
-    CONF_MQTT_HOST,
-    CONF_MQTT_PORT,
-    CONF_MQTT_USER,
-    CONF_MQTT_PASSWORD,
-    DEFAULT_MQTT_PORT,
-)
+from .const import DOMAIN, CONF_HOST, CONF_PORT, DEFAULT_PORT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,28 +27,23 @@ class SpinSenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            if not await self._async_validate_mqtt(
-                user_input.get(CONF_MQTT_HOST),
-                user_input.get(CONF_MQTT_PORT, DEFAULT_MQTT_PORT),
-                user_input.get(CONF_MQTT_USER),
-                user_input.get(CONF_MQTT_PASSWORD),
-            ):
-                errors["base"] = "invalid_mqtt"
+            host = user_input.get(CONF_HOST)
+            port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            if not await self._async_validate_connection(host, port):
+                errors["base"] = "cannot_connect"
 
             if not errors:
-                await self.async_set_unique_id(user_input.get(CONF_MQTT_HOST))
+                await self.async_set_unique_id(f"{host}:{port}")
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=f"SpinSense ({user_input.get(CONF_MQTT_HOST)})",
-                    data=user_input,
+                    title=f"SpinSense ({host}:{port})",
+                    data={"host": host, "port": port},
                 )
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_MQTT_HOST): str,
-                vol.Required(CONF_MQTT_PORT, default=DEFAULT_MQTT_PORT): int,
-                vol.Optional(CONF_MQTT_USER, default=""): str,
-                vol.Optional(CONF_MQTT_PASSWORD, default=""): str,
+                vol.Required(CONF_HOST): str,
+                vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
             }
         )
 
@@ -60,40 +51,62 @@ class SpinSenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=schema, errors=errors
         )
 
-    @staticmethod
-    async def _async_validate_mqtt(
-        host: str, port: int, user: str, password: str
-    ) -> bool:
-        """Validate MQTT connection."""
-        import paho.mqtt.client as mqtt
+    async def async_step_zeroconf(self, discovery_info) -> FlowResult:
+        """Handle zeroconf discovery."""
+        host = discovery_info.host
+        if isinstance(host, bytes):
+            host = host.decode("utf-8")
 
-        def on_connect(client, userdata, flags, rc, properties=None):
-            userdata["connected"] = rc == 0
+        port = discovery_info.port
+        unique_id = f"{host}:{port}"
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured()
+
+        return self.async_create_entry(
+            title=f"SpinSense ({host}:{port})",
+            data={"host": host, "port": port},
+        )
+
+    async def async_step_mqtt(self, discovery_info) -> FlowResult:
+        """Handle MQTT discovery."""
+        payload = discovery_info.payload
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError:
+                _LOGGER.error("Invalid MQTT discovery payload")
+                return self.async_abort(reason="cannot_connect")
+
+        if not isinstance(payload, dict):
+            _LOGGER.error("Unexpected MQTT discovery payload type: %s", type(payload))
+            return self.async_abort(reason="cannot_connect")
+
+        host = payload.get("host")
+        port = payload.get("port", DEFAULT_PORT)
+        if not host:
+            _LOGGER.error("MQTT discovery payload missing host")
+            return self.async_abort(reason="cannot_connect")
+
+        if not await self._async_validate_connection(host, port):
+            return self.async_abort(reason="cannot_connect")
+
+        unique_id = f"{host}:{port}"
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured()
+
+        return self.async_create_entry(
+            title=f"SpinSense ({host}:{port})",
+            data={"host": host, "port": port},
+        )
+
+    async def _async_validate_connection(self, host: str, port: int) -> bool:
+        """Validate HTTP connectivity to the SpinSense instance."""
+        session = async_get_clientsession(self.hass)
+        url = f"http://{host}:{port}/api/status"
 
         try:
-            client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-            userdata = {"connected": False}
-            client.user_data_set(userdata)
-            client.on_connect = on_connect
-
-            if user:
-                client.username_pw_set(user, password)
-
-            client.connect(host, port, keepalive=5)
-            client.loop_start()
-
-            # Wait max 5 seconds for connection
-            import asyncio
-            for _ in range(50):
-                if userdata.get("connected"):
-                    client.loop_stop()
-                    client.disconnect()
-                    return True
-                await asyncio.sleep(0.1)
-
-            client.loop_stop()
-            client.disconnect()
-            return False
-        except Exception as e:
-            _LOGGER.error("MQTT validation error: %s", e)
+            async with session.get(url, timeout=10) as response:
+                return response.status == 200
+        except Exception as err:
+            _LOGGER.error("SpinSense connection validation failed: %s", err)
             return False

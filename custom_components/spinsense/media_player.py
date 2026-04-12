@@ -1,7 +1,5 @@
 """Media player platform for SpinSense."""
 
-import asyncio
-import json
 import logging
 from typing import Any
 
@@ -14,23 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import (
-    DOMAIN,
-    CONF_MQTT_HOST,
-    CONF_MQTT_PORT,
-    CONF_MQTT_USER,
-    CONF_MQTT_PASSWORD,
-    TOPIC_STATE,
-    TOPIC_TITLE,
-    TOPIC_ARTIST,
-    TOPIC_ALBUM,
-    TOPIC_ALBUM_ART,
-    STATE_PLAYING,
-    STATE_PAUSED,
-    STATE_STOPPED,
-    STATE_IDLE,
-    STATE_OFF,
-)
+from .const import DOMAIN
 from .entity import SpinSenseEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,9 +24,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SpinSense media player."""
-    entities = [
-        SpinSenseMediaPlayer(hass, config_entry),
-    ]
+    entities = [SpinSenseMediaPlayer(hass, config_entry)]
     async_add_entities(entities)
 
 
@@ -64,95 +44,54 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
         self._attr_unique_id = f"{DOMAIN}_{config_entry.entry_id}"
         self._attr_name = "Vinyl Record Player"
 
+        self._api = self.hass.data[DOMAIN][config_entry.entry_id]["api"]
+
         self._state = MediaPlayerState.IDLE
         self._title = None
         self._artist = None
         self._album = None
         self._album_art_url = None
+        self._listener_remove = None
 
-        self._mqtt_host = config_entry.data.get(CONF_MQTT_HOST)
-        self._mqtt_port = config_entry.data.get(CONF_MQTT_PORT, 1883)
-        self._mqtt_user = config_entry.data.get(CONF_MQTT_USER, "")
-        self._mqtt_password = config_entry.data.get(CONF_MQTT_PASSWORD, "")
-
-        self._subscriptions = {}
+        self._update_from_api()
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to MQTT topics when added to hass."""
+        """Subscribe to SpinSense state updates."""
         await super().async_added_to_hass()
-
-        # Get MQTT client from integration data
-        mqtt_client = self.hass.data[DOMAIN][self._config_entry.entry_id].get("mqtt_client")
-
-        if mqtt_client:
-            # Subscribe to all relevant topics
-            topics = [
-                (TOPIC_STATE, 0),
-                (TOPIC_TITLE, 0),
-                (TOPIC_ARTIST, 0),
-                (TOPIC_ALBUM, 0),
-                (TOPIC_ALBUM_ART, 0),
-            ]
-
-            def on_message(client, userdata, msg):
-                """Handle MQTT message."""
-                self.hass.async_create_task(self._async_handle_mqtt_message(msg))
-
-            for topic, qos in topics:
-                try:
-                    mqtt_client.subscribe(topic, qos)
-                    self._subscriptions[topic] = True
-                except Exception as e:
-                    _LOGGER.error("Failed to subscribe to topic %s: %s", topic, e)
-
-            mqtt_client.on_message = on_message
-            _LOGGER.info("Subscribed to SpinSense MQTT topics")
+        self._listener_remove = self._api.async_add_listener(self._async_handle_api_update)
 
     async def async_will_remove_from_hass(self) -> None:
-        """Unsubscribe from MQTT topics when removed."""
-        mqtt_client = self.hass.data[DOMAIN][self._config_entry.entry_id].get("mqtt_client")
-
-        if mqtt_client:
-            for topic in self._subscriptions:
-                try:
-                    mqtt_client.unsubscribe(topic)
-                except Exception as e:
-                    _LOGGER.error("Failed to unsubscribe from topic %s: %s", topic, e)
-
+        """Unsubscribe when removed."""
+        if self._listener_remove:
+            self._listener_remove()
         await super().async_will_remove_from_hass()
 
-    async def _async_handle_mqtt_message(self, msg: Any) -> None:
-        """Handle incoming MQTT message."""
-        topic = msg.topic
-        payload = msg.payload.decode("utf-8", errors="ignore")
+    async def _async_handle_api_update(self) -> None:
+        self._update_from_api()
+        self.async_write_ha_state()
 
-        try:
-            if topic == TOPIC_STATE:
-                # Map payload to MediaPlayerState
-                state_map = {
-                    STATE_PLAYING: MediaPlayerState.PLAYING,
-                    STATE_PAUSED: MediaPlayerState.PAUSED,
-                    STATE_STOPPED: MediaPlayerState.IDLE,
-                    STATE_IDLE: MediaPlayerState.IDLE,
-                    STATE_OFF: MediaPlayerState.OFF,
-                }
-                self._state = state_map.get(payload.lower(), MediaPlayerState.IDLE)
+    def _update_from_api(self) -> None:
+        payload = self._api.state
+        status = payload.get("status_msg", "").lower()
+        if status == "playing":
+            self._state = MediaPlayerState.PLAYING
+        elif status in {"paused"}:
+            self._state = MediaPlayerState.PAUSED
+        else:
+            self._state = MediaPlayerState.IDLE
 
-            elif topic == TOPIC_TITLE:
-                self._title = payload or None
+        track = payload.get("track", {}) or {}
+        self._title = track.get("title") or None
+        self._artist = track.get("artist") or None
+        self._album = track.get("album") or None
 
-            elif topic == TOPIC_ARTIST:
-                self._artist = payload or None
-
-            elif topic == TOPIC_ALBUM:
-                self._album = payload or None
-
-            elif topic == TOPIC_ALBUM_ART:
-                self._album_art_url = payload or None
-
-            self.async_write_ha_state()
-        except Exception as e:
-            _LOGGER.error("Error processing MQTT message from %s: %s", topic, e)
+        art_url = track.get("art_url") or None
+        if art_url and art_url.startswith(("http://", "https://", "data:")):
+            self._album_art_url = art_url
+        elif art_url:
+            self._album_art_url = f"data:image/jpeg;base64,{art_url}"
+        else:
+            self._album_art_url = None
 
     @property
     def state(self) -> MediaPlayerState | None:
@@ -177,31 +116,22 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
     @property
     def entity_picture(self) -> str | None:
         """Return the album art."""
-        if not self._album_art_url:
-            return None
-        if self._album_art_url.startswith(("data:", "http://", "https://")):
-            return self._album_art_url
-        # Assume raw base64 when the payload is not a URL
-        return f"data:image/jpeg;base64,{self._album_art_url}"
+        return self._album_art_url
 
     async def async_play_media(
         self, media_type: str, media_id: str, **kwargs: Any
     ) -> None:
         """Play a piece of media."""
-        # This is handled externally by the core engine
         _LOGGER.debug("Play media called (not supported for vinyl)")
 
     async def async_media_play(self) -> None:
         """Send play command."""
-        # This is handled externally by the core engine
         _LOGGER.debug("Play command called (not supported for vinyl)")
 
     async def async_media_pause(self) -> None:
         """Send pause command."""
-        # This is handled externally by the core engine
         _LOGGER.debug("Pause command called (not supported for vinyl)")
 
     async def async_media_stop(self) -> None:
         """Send stop command."""
-        # This is handled externally by the core engine
         _LOGGER.debug("Stop command called (not supported for vinyl)")

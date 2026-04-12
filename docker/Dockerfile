@@ -1,6 +1,11 @@
 ARG PYTHON_BASE=python:3.11-slim-bullseye
 FROM ${PYTHON_BASE}
 
+# The default image is multi-arch and supports amd64 and arm64 hosts,
+# including Orange Pi Zero 2W running DietPi (Debian Trixie-based).
+# The Docker container uses its own Debian-based Python runtime, so the host OS
+# only matters for Docker installation and hardware access, not the image internals.
+
 LABEL maintainer="SpinSense Contributors"
 LABEL description="SpinSense - Vinyl Record Player integration for Home Assistant"
 

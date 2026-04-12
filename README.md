@@ -6,9 +6,11 @@ Integrate your analogue record player into your digital life. This tool uses aud
 
 - MQTT-backed media player: Home Assistant receives track metadata via MQTT and exposes it as a media_player entity.
 
+- MQTT auto-discovery: The engine can now publish an MQTT discovery payload to auto-register the SpinSense service in Home Assistant.
+
 - Separate Audio Engine: The HA custom integration consumes MQTT metadata, while the Pi Zero runs the audio recognition engine.
 
-- Multi-Arch Ready: Runs natively on Raspberry Pi (ARM) near your deck or on your main NAS (x64).
+- Multi-Arch Ready: Runs natively on Raspberry Pi, Orange Pi Zero 2W (DietPi), or x64 systems.
 
 - Guided Onboarding: A built-in Web GUI to help you calibrate your "Silence vs. Music" thresholds.
 
@@ -37,7 +39,7 @@ This project is built to be modular and Docker-first:
 
 SpinSense includes both a standalone recognition engine and a Home Assistant custom integration:
 
-- `custom_components/spinsense/` is the HA custom integration.
+- `custom_components/spinsense/` is the HA custom integration. 
 - `core_engine.py` is the standalone audio recognition engine.
 
 ### Home Assistant Installation via HACS

@@ -4,17 +4,11 @@ set -e
 # Clean up any old socket files
 rm -f /tmp/spinsense.sock
 
-# Source environment variables from .env file if it exists (for local development)
-if [ -f "/app/.env" ]; then
-    set -a
-    source /app/.env
-    set +a
-fi
-
 # Log configuration
 echo "📋 SpinSense Configuration:"
 echo "  MQTT Host: ${MQTT_HOST:-192.168.1.100}"
 echo "  MQTT Port: ${MQTT_PORT:-1883}"
+echo "  MQTT Discovery Topic: ${MQTT_DISCOVERY_TOPIC:-homeassistant/media_player/spin_sense/config}"
 echo "  Audio Threshold: ${AUDIO_THRESHOLD:-0.015}"
 echo "  Audio Sample Rate: ${AUDIO_SAMPLE_RATE:-48000} Hz"
 echo "  Log Level: ${LOG_LEVEL:-INFO}"

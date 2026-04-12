@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+      args:
+        PYTHON_BASE: ${PYTHON_BASE:-python:3.11-slim-bullseye}
     
     container_name: spinsense_engine
     restart: unless-stopped
@@ -34,6 +36,7 @@ services:
       - MQTT_PORT=${MQTT_PORT:-1883}
       - MQTT_USER=${MQTT_USER:-}
       - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - MQTT_DISCOVERY_TOPIC=${MQTT_DISCOVERY_TOPIC:-homeassistant/media_player/spin_sense/config}
       - AUDIO_DEVICE=${AUDIO_DEVICE:-}
       - AUDIO_THRESHOLD=${AUDIO_THRESHOLD:-0.015}
       - AUDIO_SAMPLE_LENGTH=${AUDIO_SAMPLE_LENGTH:-5.0}
