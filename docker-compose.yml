@@ -30,7 +30,7 @@ services:
     environment:
       - MQTT_HOST=${MQTT_HOST:-192.168.1.100}
       - MQTT_PORT=${MQTT_PORT:-1883}
-      - MQTT_USER=${MQTT_USER:-}
+      - MQTT_USER=${MQTT_USER:-spinsense}
       - MQTT_PASSWORD=${MQTT_PASSWORD:-}
       - MQTT_DISCOVERY_TOPIC=${MQTT_DISCOVERY_TOPIC:-homeassistant/media_player/spin_sense/config}
       - AUDIO_DEVICE=${AUDIO_DEVICE:-}
