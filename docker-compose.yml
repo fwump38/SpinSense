@@ -2,11 +2,7 @@ version: '3.8'
 
 services:
   spinsense:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      args:
-        PYTHON_BASE: ${PYTHON_BASE:-python:3.11-slim-bullseye}
+    image: ghcr.io/fwump38/spinsense:latest
     
     container_name: spinsense_engine
     restart: unless-stopped

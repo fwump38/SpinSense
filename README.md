@@ -1,6 +1,8 @@
 # 💿 SpinSense
 Integrate your analogue record player into your digital life. This tool uses audio recognition and MQTT to create a media player entity for Home Assistant to show the song currently spinning on your turntable. 
 
+![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Ffwump38%2Fspinsense-blue) 
+
 ## ✨ Features
 - Automatic ID: Powered by songrec (Shazam-compatible) for high-accuracy track recognition.
 

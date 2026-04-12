@@ -51,20 +51,18 @@ SpinSense can run on small ARM systems such as Raspberry Pi Zero 2W (or similar)
 ### Quick start
 
 1. Copy `config.json` into the project root.
-2. Edit `config.json` with your MQTT broker settings and audio device options before building the image.
-3. Build the Docker image:
-   ```bash
-   docker compose build
-   ```
-4. Start the service:
+2. Edit `config.json` with your MQTT broker settings and audio device options.
+3. Start the service:
    ```bash
    docker compose up -d
    ```
 
+The Docker image is automatically built and published to GitHub Container Registry (GHCR) on every push to the main branch.
+
 ### Configuration
 
 - `config.json` is the primary configuration source.
-- Edit `config.json` directly before building or running the container.
+- Edit `config.json` directly before running the container.
 
 Recommended fields to update:
 
@@ -83,13 +81,12 @@ Recommended fields to update:
 - Use a USB audio interface with a supported sample rate; `48000` is preferred if available.
 - If `48000` isn't supported, try `44100` or `16000`.
 - Connect a USB audio interface with an input device; the engine will auto-detect USB audio if `AUDIO_DEVICE` is blank.
-- Build times may be long on Pi Zero due to `numpy` and `sounddevice` compilation.
 
 ## 3. Recommended Setup
 
 For the cleanest experience:
 
-- Use Docker to build and run the standalone recognition engine.
+- Use Docker to run the standalone recognition engine.
 - Run `core_engine.py` inside the container, with `config.json` mounted from the host.
 - Use the same MQTT broker that Home Assistant is configured to use.
 
