@@ -5,11 +5,10 @@
         "@fwump38"
     ],
     "requirements": [],
-    "version": "0.0.2",
+    "version": "0.0.3",
     "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
     "documentation": "https://github.com/fwump38/SpinSense#readme",
     "homeassistant": "2024.3.0",
-    "zip_release": true,
     "config_flow": true,
     "zeroconf": [
         "_spinsense._tcp.local."
