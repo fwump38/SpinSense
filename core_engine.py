@@ -8,7 +8,6 @@ import urllib.parse
 import aiohttp
 import numpy as np
 import sounddevice as sd
-import paho.mqtt.client as mqtt
 import base64
 import logging
 from shazamio import Shazam
@@ -31,20 +30,6 @@ DEFAULT_CONFIG = {
     'SILENCE_LIMIT': 5.0,
     'MIC_DEVICE': None,
     'SAMPLE_RATE': 48000,
-    'MQTT_ENABLED': True,
-    'MQTT_HOST': '127.0.0.1',
-    'MQTT_PORT': 1883,
-    'MQTT_USER': '',
-    'MQTT_PASSWORD': '',
-    'MQTT_DISCOVERY_ENABLED': True,
-    'MQTT_DISCOVERY_TOPIC': 'homeassistant/media_player/spin_sense/config',
-    'MQTT_TOPIC_STATE': 'home/vinyl/state',
-    'MQTT_TOPIC_TITLE': 'home/vinyl/title',
-    'MQTT_TOPIC_ARTIST': 'home/vinyl/artist',
-    'MQTT_TOPIC_ALBUM': 'home/vinyl/album',
-    'MQTT_TOPIC_ALBUM_ART': 'home/vinyl/album_art',
-    'MQTT_TOPIC_LEGACY': 'home/vinyl/now_playing',
-    'API_PORT': 8000,
 }
 
 
@@ -53,17 +38,13 @@ class SpinSenseEngine:
 
     def __init__(
         self,
-        mqtt_client: Optional[mqtt.Client] = None,
         config: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the SpinSense engine.
         
         Args:
-            mqtt_client: Optional MQTT client. If None, will be created.
             config: Optional config dict with keys like THRESHOLD, SAMPLE_LEN, etc.
         """
-        self.mqtt_client = mqtt_client
-        self.mqtt_enabled = mqtt_client is not None
 
         # Load config from parameter or file
         if config:
@@ -75,16 +56,6 @@ class SpinSenseEngine:
         self.sample_len = self.config.get('SAMPLE_LEN', DEFAULT_CONFIG['SAMPLE_LEN'])
         self.silence_limit = self.config.get('SILENCE_LIMIT', DEFAULT_CONFIG['SILENCE_LIMIT'])
         self.sample_rate = self.config.get('SAMPLE_RATE', DEFAULT_CONFIG['SAMPLE_RATE'])
-
-        self.topic_state = self.config.get('MQTT_TOPIC_STATE', DEFAULT_CONFIG['MQTT_TOPIC_STATE'])
-        self.topic_title = self.config.get('MQTT_TOPIC_TITLE', DEFAULT_CONFIG['MQTT_TOPIC_TITLE'])
-        self.topic_artist = self.config.get('MQTT_TOPIC_ARTIST', DEFAULT_CONFIG['MQTT_TOPIC_ARTIST'])
-        self.topic_album = self.config.get('MQTT_TOPIC_ALBUM', DEFAULT_CONFIG['MQTT_TOPIC_ALBUM'])
-        self.topic_artart = self.config.get('MQTT_TOPIC_ALBUM_ART', DEFAULT_CONFIG['MQTT_TOPIC_ALBUM_ART'])
-        self.topic_legacy = self.config.get('MQTT_TOPIC_LEGACY', DEFAULT_CONFIG['MQTT_TOPIC_LEGACY'])
-        self.mqtt_discovery_enabled = self.config.get('MQTT_DISCOVERY_ENABLED', DEFAULT_CONFIG['MQTT_DISCOVERY_ENABLED'])
-        self.mqtt_discovery_topic = self.config.get('MQTT_DISCOVERY_TOPIC', DEFAULT_CONFIG['MQTT_DISCOVERY_TOPIC'])
-        self.api_port = self.config.get('API_PORT', DEFAULT_CONFIG['API_PORT'])
 
         device_name = self.config.get('MIC_DEVICE', DEFAULT_CONFIG['MIC_DEVICE'])
         device_index = self.config.get('MIC_DEVICE_INDEX')
@@ -102,9 +73,6 @@ class SpinSenseEngine:
             "current_rms": 0.0
         }
 
-        self._initialize_mqtt_client()
-        self._publish_discovery_if_ready()
-
     @staticmethod
     def _load_config_from_file() -> Dict[str, Any]:
         """Load configuration from config.json file or environment variables."""
@@ -118,20 +86,6 @@ class SpinSenseEngine:
                     'MIC_DEVICE': config.audio.device_name,
                     'MIC_DEVICE_INDEX': config.audio.device_index,
                     'SAMPLE_RATE': config.audio.sample_rate,
-                    'MQTT_ENABLED': config.mqtt.enabled,
-                    'MQTT_HOST': config.mqtt.broker.host,
-                    'MQTT_PORT': config.mqtt.broker.port,
-                    'MQTT_USER': config.mqtt.broker.user,
-                    'MQTT_PASSWORD': config.mqtt.broker.password,
-                    'MQTT_DISCOVERY_ENABLED': config.mqtt.discovery.enabled,
-                    'MQTT_DISCOVERY_TOPIC': config.mqtt.discovery.discovery_topic,
-                    'MQTT_TOPIC_STATE': config.mqtt.topics.state,
-                    'MQTT_TOPIC_TITLE': config.mqtt.topics.title,
-                    'MQTT_TOPIC_ARTIST': config.mqtt.topics.artist,
-                    'MQTT_TOPIC_ALBUM': config.mqtt.topics.album,
-                    'MQTT_TOPIC_ALBUM_ART': config.mqtt.topics.album_art,
-                    'MQTT_TOPIC_LEGACY': config.mqtt.topics.state.replace('/state', '/now_playing') if config.mqtt.topics.state else DEFAULT_CONFIG['MQTT_TOPIC_LEGACY'],
-                    'API_PORT': DEFAULT_CONFIG['API_PORT'],
                 }
             except Exception as e:
                 _LOGGER.warning(f"Error loading config via config_manager: {e}, falling back to file parse")
@@ -141,9 +95,6 @@ class SpinSenseEngine:
         try:
             with open(config_path, 'r') as f:
                 config_data = json.load(f)
-                mqtt_data = config_data.get('MQTT', {})
-                discovery_data = mqtt_data.get('Discovery', {})
-                topics_data = mqtt_data.get('Topics', {})
                 return {
                     'THRESHOLD': config_data.get('Audio', {}).get('Volume_Threshold', DEFAULT_CONFIG['THRESHOLD']),
                     'SAMPLE_LEN': config_data.get('Audio', {}).get('Song_Sample_Length', DEFAULT_CONFIG['SAMPLE_LEN']),
@@ -151,20 +102,6 @@ class SpinSenseEngine:
                     'MIC_DEVICE': config_data.get('Hardware', {}).get('Mic_Device', DEFAULT_CONFIG['MIC_DEVICE']),
                     'MIC_DEVICE_INDEX': config_data.get('Audio', {}).get('Device_Index'),
                     'SAMPLE_RATE': config_data.get('Audio', {}).get('Sample_Rate', DEFAULT_CONFIG['SAMPLE_RATE']),
-                    'MQTT_ENABLED': mqtt_data.get('Enabled', DEFAULT_CONFIG['MQTT_ENABLED']),
-                    'MQTT_HOST': mqtt_data.get('Broker', {}).get('Host', DEFAULT_CONFIG['MQTT_HOST']),
-                    'MQTT_PORT': mqtt_data.get('Broker', {}).get('Port', DEFAULT_CONFIG['MQTT_PORT']),
-                    'MQTT_USER': mqtt_data.get('Broker', {}).get('User', DEFAULT_CONFIG['MQTT_USER']),
-                    'MQTT_PASSWORD': mqtt_data.get('Broker', {}).get('Password', DEFAULT_CONFIG['MQTT_PASSWORD']),
-                    'MQTT_DISCOVERY_ENABLED': discovery_data.get('Enabled', DEFAULT_CONFIG['MQTT_DISCOVERY_ENABLED']),
-                    'MQTT_DISCOVERY_TOPIC': discovery_data.get('Discovery_Topic', DEFAULT_CONFIG['MQTT_DISCOVERY_TOPIC']),
-                    'MQTT_TOPIC_STATE': topics_data.get('State', DEFAULT_CONFIG['MQTT_TOPIC_STATE']),
-                    'MQTT_TOPIC_TITLE': topics_data.get('Title', DEFAULT_CONFIG['MQTT_TOPIC_TITLE']),
-                    'MQTT_TOPIC_ARTIST': topics_data.get('Artist', DEFAULT_CONFIG['MQTT_TOPIC_ARTIST']),
-                    'MQTT_TOPIC_ALBUM': topics_data.get('Album_Art', DEFAULT_CONFIG['MQTT_TOPIC_ALBUM']),
-                    'MQTT_TOPIC_ALBUM_ART': topics_data.get('Album_Art', DEFAULT_CONFIG['MQTT_TOPIC_ALBUM_ART']),
-                    'MQTT_TOPIC_LEGACY': topics_data.get('State', DEFAULT_CONFIG['MQTT_TOPIC_STATE']).replace('/state', '/now_playing'),
-                    'API_PORT': DEFAULT_CONFIG['API_PORT'],
                 }
         except Exception as e:
             _LOGGER.warning(f"Could not load config.json, using defaults: {e}")
@@ -179,57 +116,6 @@ class SpinSenseEngine:
         except Exception:
             return "127.0.0.1"
 
-    def _initialize_mqtt_client(self) -> None:
-        """Create and connect an MQTT client if enabled."""
-        if self.mqtt_client is not None:
-            return
-
-        if not self.config.get('MQTT_ENABLED', True):
-            _LOGGER.info("MQTT disabled in configuration; skipping MQTT setup")
-            self.mqtt_enabled = False
-            return
-
-        host = self.config.get('MQTT_HOST')
-        port = self.config.get('MQTT_PORT', 1883)
-        if not host:
-            _LOGGER.warning("MQTT host is not configured; skipping MQTT setup")
-            self.mqtt_enabled = False
-            return
-
-        try:
-            self.mqtt_client = mqtt.Client()
-            username = self.config.get('MQTT_USER')
-            password = self.config.get('MQTT_PASSWORD')
-            if username:
-                self.mqtt_client.username_pw_set(username, password or "")
-
-            self.mqtt_client.connect(host, port, 60)
-            self.mqtt_client.loop_start()
-            self.mqtt_enabled = True
-            _LOGGER.info(f"Connected to MQTT broker at {host}:{port}")
-        except Exception as e:
-            _LOGGER.error(f"Could not connect to MQTT broker: {e}")
-            self.mqtt_enabled = False
-
-    def _publish_discovery_if_ready(self) -> None:
-        """Publish MQTT discovery payload if discovery is enabled."""
-        if not self.mqtt_enabled or not self.mqtt_discovery_enabled or not self.mqtt_client:
-            return
-
-        payload = json.dumps({
-            "name": "SpinSense",
-            "host": self._get_local_host(),
-            "port": self.api_port,
-            "service": "spinsense",
-            "protocol": "http",
-        })
-
-        try:
-            self.mqtt_client.publish(self.mqtt_discovery_topic, payload, retain=True)
-            _LOGGER.info(f"Published MQTT discovery to {self.mqtt_discovery_topic}")
-        except Exception as e:
-            _LOGGER.error(f"Error publishing MQTT discovery payload: {e}")
-
     def publish_state(
         self,
         status: str,
@@ -239,33 +125,14 @@ class SpinSenseEngine:
         art_url: str = "",
         art_base64: str = "",
     ) -> None:
-        """Publish state to MQTT."""
-        if self.mqtt_enabled and self.mqtt_client:
-            try:
-                self.mqtt_client.publish(self.topic_state, status, retain=True)
-                self.mqtt_client.publish(self.topic_title, title, retain=True)
-                self.mqtt_client.publish(self.topic_artist, artist, retain=True)
-                self.mqtt_client.publish(self.topic_album, album, retain=True)
-
-                if art_base64:
-                    self.mqtt_client.publish(self.topic_artart, art_base64, retain=True)
-                else:
-                    self.mqtt_client.publish(self.topic_artart, "", retain=True)
-
-                # Legacy JSON payload for compatibility
-                payload = json.dumps({
-                    "status": status,
-                    "artist": artist,
-                    "title": title,
-                    "album": album,
-                    "art_url": art_url
-                })
-                self.mqtt_client.publish(self.topic_legacy, payload, retain=True)
-                _LOGGER.info(f"Published State -> Status: {status.upper()} | {artist} - {title}")
-            except Exception as e:
-                _LOGGER.error(f"Error publishing to MQTT: {e}")
-        else:
-            _LOGGER.info(f"[MOCK MQTT] Published State -> Status: {status.upper()} | {artist} - {title}")
+        """Legacy compatibility stub after MQTT removal."""
+        _LOGGER.debug(
+            "publish_state called with status=%s artist=%s title=%s album=%s",
+            status,
+            artist,
+            title,
+            album,
+        )
 
     async def fetch_itunes_metadata(self, artist: str, title: str) -> tuple:
         """Fetch high-res album art and album name from iTunes API."""

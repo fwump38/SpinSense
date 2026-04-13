@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            
+
             if (data.type === 'live_status') {
                 const payload = data.payload;
 
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('track-title').innerText = payload.track.title;
                     document.getElementById('track-artist').innerText = payload.track.artist || "Unknown Artist";
                     document.getElementById('track-album').innerText = payload.track.album || "Unknown Album";
-                    
+
                     const artImg = document.getElementById('album-art');
                     if (payload.track.art_url) {
                         artImg.src = payload.track.art_url;
@@ -59,8 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const devRes = await fetch('/api/devices');
             const devData = await devRes.json();
             const select = document.getElementById('mic-device');
-            select.innerHTML = ''; 
-            
+            select.innerHTML = '';
+
             const defaultOpt = document.createElement('option');
             defaultOpt.value = "default";
             defaultOpt.textContent = "System Default";
@@ -80,17 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const confRes = await fetch('/api/config');
             const config = await confRes.json();
-            
+
             if (config.Hardware && config.Hardware.Mic_Device) {
                 document.getElementById('mic-device').value = config.Hardware.Mic_Device;
             }
             if (config.Audio) {
                 if (config.Audio.Volume_Threshold) document.getElementById('vol-threshold').value = config.Audio.Volume_Threshold;
                 if (config.Audio.Song_Sample_Length) document.getElementById('sample-len').value = config.Audio.Song_Sample_Length;
-            }
-            if (config.MQTT && config.MQTT.Broker) {
-                if (config.MQTT.Broker.Host) document.getElementById('mqtt-host').value = config.MQTT.Broker.Host;
-                if (config.MQTT.Broker.Port) document.getElementById('mqtt-port').value = config.MQTT.Broker.Port;
             }
         } catch (error) {
             console.error("Failed to load config:", error);
@@ -102,15 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Gather all inputs and build the JSON object
         const configPayload = {
             Hardware: { Mic_Device: document.getElementById('mic-device').value },
-            Audio: { 
+            Audio: {
                 Volume_Threshold: parseFloat(document.getElementById('vol-threshold').value),
                 Song_Sample_Length: parseFloat(document.getElementById('sample-len').value)
-            },
-            MQTT: {
-                Broker: {
-                    Host: document.getElementById('mqtt-host').value,
-                    Port: parseInt(document.getElementById('mqtt-port').value)
-                }
             }
         };
 
@@ -120,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(configPayload)
         });
-        
+
         // Brief visual feedback
         const btn = document.getElementById('btn-save-config');
         btn.innerText = "Saved!";
@@ -141,4 +131,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize everything on page load
     loadConfigAndDevices();
-});f
+}); f

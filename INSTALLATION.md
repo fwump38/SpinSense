@@ -2,8 +2,8 @@
 
 This repository contains two complementary pieces:
 
-- `custom_components/spinsense/`: a Home Assistant custom integration that creates a media player entity from MQTT data.
-- `core_engine.py`: the standalone recognition engine that listens to USB audio, recognizes the playing record, and publishes metadata to MQTT.
+- `custom_components/spinsense/`: a Home Assistant custom integration that discovers the local SpinSense service and displays live track metadata.
+- `core_engine.py`: the standalone recognition engine that listens to USB audio, recognizes the playing record, and serves real-time updates over HTTP/WebSocket.
 
 ## 1. Home Assistant Custom Integration
 
@@ -15,7 +15,7 @@ This repository contains two complementary pieces:
 4. Install `SpinSense` from HACS.
 5. Restart Home Assistant.
 6. Open `Settings -> Devices & Services -> Add Integration` and add `SpinSense`.
-7. Enter your MQTT broker settings and select the USB audio device for the engine.
+6. Home Assistant should discover the SpinSense service automatically via zeroconf.
 8. After setup, the `Vinyl Record Player` media player entity will appear in Home Assistant.
 
 ### Option B: Manual installation
@@ -33,7 +33,7 @@ This repository contains two complementary pieces:
 
 4. Search for `SpinSense` and follow the configuration flow.
 
-5. Enter your MQTT broker settings and select the USB audio device for the engine.
+5. Home Assistant should detect your SpinSense service automatically over the local network.
 
 6. After setup, the `Vinyl Record Player` media player entity will appear in Home Assistant.
 
@@ -46,12 +46,11 @@ SpinSense can run on small ARM systems such as Raspberry Pi Zero 2W (or similar)
 - Single Board Computer like Raspberry Pi Zero 2W
 - Docker installed on the device
 - USB audio interface connected to the board
-- MQTT broker reachable on the network
 
 ### Quick start
 
 1. Copy `config.json` into the project root.
-2. Edit `config.json` with your MQTT broker settings and audio device options.
+2. Edit `config.json` with your audio device options.
 3. Start the service:
    ```bash
    docker compose up -d
@@ -66,10 +65,6 @@ The Docker image is automatically built and published to GitHub Container Regist
 
 Recommended fields to update:
 
-- `MQTT.Broker.Host`
-- `MQTT.Broker.Port`
-- `MQTT.Broker.User`
-- `MQTT.Broker.Password`
 - `Audio.Volume_Threshold`
 - `Audio.Song_Sample_Length`
 - `Audio.New_Song_Silence_Interval`
@@ -88,7 +83,7 @@ For the cleanest experience:
 
 - Use Docker to run the standalone recognition engine.
 - Run `core_engine.py` inside the container, with `config.json` mounted from the host.
-- Use the same MQTT broker that Home Assistant is configured to use.
+- Ensure the SpinSense service is reachable from Home Assistant on port `8000`.
 
 ## 4. Troubleshooting
 

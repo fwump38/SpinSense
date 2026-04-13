@@ -2,18 +2,16 @@
     "config": {
         "step": {
             "user": {
-                "title": "Connect to MQTT Broker",
-                "description": "Configure the MQTT broker connection for SpinSense.",
+                "title": "Connect to SpinSense Service",
+                "description": "Configure the SpinSense service connection.",
                 "data": {
-                    "mqtt_host": "MQTT Broker Host",
-                    "mqtt_port": "MQTT Broker Port",
-                    "mqtt_user": "MQTT Username (optional)",
-                    "mqtt_password": "MQTT Password (optional)"
+                    "host": "Service Host",
+                    "port": "Service Port"
                 }
             }
         },
         "error": {
-            "invalid_mqtt": "Failed to connect to MQTT broker. Please check host, port, and credentials."
+            "cannot_connect": "Failed to connect to SpinSense service. Please check host and port."
         }
     }
 }

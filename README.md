@@ -1,20 +1,20 @@
 # 💿 SpinSense
-Integrate your analogue record player into your digital life. This tool uses audio recognition and MQTT to create a media player entity for Home Assistant to show the song currently spinning on your turntable. 
+Integrate your analogue record player into your digital life. This tool uses audio recognition and a local HTTP/WebSocket service so Home Assistant can discover and display the song currently spinning on your turntable.
 
 ![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Ffwump38%2Fspinsense-blue) 
 
 ## ✨ Features
 - Automatic ID: Powered by songrec (Shazam-compatible) for high-accuracy track recognition.
 
-- MQTT-backed media player: Home Assistant receives track metadata via MQTT and exposes it as a media_player entity.
+- Home Assistant discovery: The SpinSense service advertises itself over zeroconf so HA can prompt to add the integration.
 
-- MQTT auto-discovery: The engine can now publish an MQTT discovery payload to auto-register the SpinSense service in Home Assistant.
+- Local HTTP/WebSocket service: Home Assistant connects directly to SpinSense for live status and track metadata.
 
-- Separate Audio Engine: The HA custom integration consumes MQTT metadata, while the Pi Zero runs the audio recognition engine.
+- Separate Audio Engine: The engine runs locally and the HA custom integration consumes live status from the service.
 
 - Multi-Arch Ready: Runs natively on Raspberry Pi, Orange Pi Zero 2W (DietPi), or x64 systems.
 
-- Guided Onboarding: A built-in Web GUI to help you calibrate your "Silence vs. Music" thresholds.
+- Guided Onboarding: A built-in Web GUI helps you calibrate your audio thresholds.
 
 ## 🚀 How It Works
 - SpinSense doesn't just "guess." It monitors the RMS volume of your input device. When the needle drops:
@@ -23,7 +23,7 @@ Integrate your analogue record player into your digital life. This tool uses aud
 
   - Recognition: It captures a 10-second high-fidelity sample and identifies it.
 
-  - Communication: It publishes the Artist, Album, and Title to your MQTT Broker.
+  - Communication: It updates the local SpinSense service with the currently playing track.
 
   - Silence Logic: When the side ends or the record is stopped, it waits for a SILENCE_LIMIT before marking the player as Stopped.
 

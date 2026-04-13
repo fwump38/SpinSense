@@ -18,21 +18,16 @@ services:
     # Use host IPC for ALSA audio (required for sound access)
     ipc: host
     
-    # Use host network for MQTT communication
+# Use host network so the local service is reachable from the host
     network_mode: host
-    
+
     # Mount configuration and temporary files
     volumes:
       - ./config.json:/app/config.json
       - /tmp:/tmp
-    
+
     # Environment variables for configuration
     environment:
-      - MQTT_HOST=${MQTT_HOST:-192.168.1.100}
-      - MQTT_PORT=${MQTT_PORT:-1883}
-      - MQTT_USER=${MQTT_USER:-spinsense}
-      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
-      - MQTT_DISCOVERY_TOPIC=${MQTT_DISCOVERY_TOPIC:-homeassistant/media_player/spin_sense/config}
       - AUDIO_DEVICE=${AUDIO_DEVICE:-}
       - AUDIO_THRESHOLD=${AUDIO_THRESHOLD:-0.015}
       - AUDIO_SAMPLE_LENGTH=${AUDIO_SAMPLE_LENGTH:-5.0}

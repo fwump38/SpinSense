@@ -4,15 +4,12 @@
     "codeowners": [
         "@dmirch"
     ],
-    "requirements": [
-        "paho-mqtt==2.1.0"
-    ],
+    "requirements": [],
     "version": "0.1.0",
     "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
     "documentation": "https://github.com/fwump38/SpinSense#readme",
     "homeassistant": "2024.3.0",
     "config_flow": true,
-    "mqtt": true,
     "zeroconf": [
         "_spinsense._tcp.local."
     ],

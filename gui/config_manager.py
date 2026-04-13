@@ -19,32 +19,10 @@ class AudioConfig(BaseModel):
     New_Song_Silence_Interval: float = 10.0
     Stopped_Silence_Interval: float = 30.0
 
-class MQTTBrokerConfig(BaseModel):
-    Host: str = "127.0.0.1"
-    Port: int = 1883
-    User: str = ""
-    Password: str = ""
-
-class MQTTDiscoveryConfig(BaseModel):
-    Enabled: bool = True
-    Discovery_Topic: str = "homeassistant/media_player/spin_sense/config"
-
-class MQTTTopicsConfig(BaseModel):
-    State: str = "home/vinyl/state"
-    Title: str = "home/vinyl/title"
-    Artist: str = "home/vinyl/artist"
-    Album_Art: str = "home/vinyl/album_art"
-
-class MQTTConfig(BaseModel):
-    Broker: MQTTBrokerConfig = MQTTBrokerConfig()
-    Discovery: MQTTDiscoveryConfig = MQTTDiscoveryConfig()
-    Topics: MQTTTopicsConfig = MQTTTopicsConfig()
-
 class SpinSenseConfig(BaseModel):
     System: SystemConfig = SystemConfig()
     Hardware: HardwareConfig = HardwareConfig()
     Audio: AudioConfig = AudioConfig()
-    MQTT: MQTTConfig = MQTTConfig()
 
 # --- Core Functions ---
 def get_default_config() -> dict:

@@ -2,13 +2,11 @@
     "config": {
         "step": {
             "user": {
-                "title": "Connect to MQTT Broker",
-                "description": "Configure the MQTT broker connection for SpinSense",
+                "title": "Connect to SpinSense Service",
+                "description": "Enter the host and port for the SpinSense HTTP service.",
                 "data": {
-                    "mqtt_host": "MQTT Broker Host",
-                    "mqtt_port": "MQTT Broker Port",
-                    "mqtt_user": "MQTT Username (optional)",
-                    "mqtt_password": "MQTT Password (optional)"
+                    "host": "Service Host",
+                    "port": "Service Port"
                 }
             }
         }

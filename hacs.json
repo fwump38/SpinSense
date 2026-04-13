@@ -4,7 +4,7 @@
     "domains": [
         "integration"
     ],
-    "zip_release": false,
+    "zip_release": true,
     "filename": "custom_components/spinsense/manifest.json",
     "render_readme": true,
     "homeassistant": "2024.3.0",
