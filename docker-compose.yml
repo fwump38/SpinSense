@@ -21,14 +21,14 @@ services:
 # Use host network so the local service is reachable from the host
     network_mode: host
 
-    # Mount configuration and temporary files
+    # Mount temporary files only; configuration is provided through environment variables.
     volumes:
-      - ./config.json:/app/config.json
       - /tmp:/tmp
 
     # Environment variables for configuration
     environment:
       - AUDIO_DEVICE=${AUDIO_DEVICE:-}
+      - AUDIO_DEVICE_INDEX=${AUDIO_DEVICE_INDEX:-}
       - AUDIO_THRESHOLD=${AUDIO_THRESHOLD:-0.015}
       - AUDIO_SAMPLE_LENGTH=${AUDIO_SAMPLE_LENGTH:-5.0}
       - AUDIO_SAMPLE_RATE=${AUDIO_SAMPLE_RATE:-48000}

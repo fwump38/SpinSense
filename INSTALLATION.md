@@ -49,26 +49,57 @@ SpinSense can run on small ARM systems such as Raspberry Pi Zero 2W (or similar)
 
 ### Quick start
 
-1. Copy `config.json` into the project root.
-2. Edit `config.json` with your audio device options.
-3. Start the service:
-   ```bash
-   docker compose up -d
-   ```
+Configure your audio settings using environment variables, then run the container:
+
+```bash
+docker compose up -d
+```
 
 The Docker image is automatically built and published to GitHub Container Registry (GHCR) on every push to the main branch.
 
 ### Configuration
 
-- `config.json` is the primary configuration source.
-- Edit `config.json` directly before running the container.
+SpinSense can run without `config.json`. Use environment variables instead.
 
-Recommended fields to update:
+Common configuration variables:
 
-- `Audio.Volume_Threshold`
-- `Audio.Song_Sample_Length`
-- `Audio.New_Song_Silence_Interval`
-- `Audio.Stopped_Silence_Interval`
+- `AUDIO_DEVICE` — audio device name or alias
+- `AUDIO_DEVICE_INDEX` — audio device index (optional)
+- `AUDIO_THRESHOLD` — volume threshold for detection (default: `0.015`)
+- `AUDIO_SAMPLE_LENGTH` — recording length in seconds (default: `5.0`)
+- `AUDIO_SAMPLE_RATE` — sample rate in Hz (default: `48000`)
+- `SILENCE_INTERVAL` — silence timeout in seconds (default: `5.0`)
+- `LOG_LEVEL` — logging verbosity (default: `INFO`)
+
+If you still want to override settings from a JSON file, `config.json` remains supported but is no longer required.
+
+Example `docker-compose.yml` service configuration:
+
+```yaml
+services:
+  spinsense:
+    image: ghcr.io/fwump38/spinsense:latest
+    container_name: spinsense
+    restart: unless-stopped
+    devices:
+      - "/dev/snd:/dev/snd"
+    group_add:
+      - "29"
+    ipc: host
+    network_mode: host
+    volumes:
+      - /tmp:/tmp
+    environment:
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-}
+      - AUDIO_DEVICE_INDEX=${AUDIO_DEVICE_INDEX:-}
+      - AUDIO_THRESHOLD=${AUDIO_THRESHOLD:-0.015}
+      - AUDIO_SAMPLE_LENGTH=${AUDIO_SAMPLE_LENGTH:-5.0}
+      - AUDIO_SAMPLE_RATE=${AUDIO_SAMPLE_RATE:-48000}
+      - SILENCE_INTERVAL=${SILENCE_INTERVAL:-5.0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+```
+
+Use a `.env` file or Portainer stack environment section to control runtime settings.
 
 ### Notes for Pi Zero
 
@@ -82,7 +113,7 @@ Recommended fields to update:
 For the cleanest experience:
 
 - Use Docker to run the standalone recognition engine.
-- Run `core_engine.py` inside the container, with `config.json` mounted from the host.
+- Configure runtime settings with environment variables instead of mounting `config.json`.
 - Ensure the SpinSense service is reachable from Home Assistant on port `8000`.
 
 ## 4. Troubleshooting

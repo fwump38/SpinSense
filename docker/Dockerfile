@@ -34,9 +34,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY core/ ./core/
 COPY gui/ ./gui/
 COPY core_engine.py .
-COPY config.json .
 COPY docker/ ./docker/
 
+# config.json is optional; the container can be configured via environment variables.
 # Make sure entrypoint is executable
 RUN chmod +x ./docker/entrypoint.sh
 

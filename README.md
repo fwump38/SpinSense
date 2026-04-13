@@ -53,5 +53,7 @@ This repository is HACS-ready. To install it with HACS:
 3. Add this repository URL: `https://github.com/fwump38/SpinSense`.
 4. Install `SpinSense` from HACS and restart Home Assistant.
 
+> Note: Standalone Docker deployment now supports configuration via environment variables only. A local `config.json` file is optional.
+
 For complete installation steps, see [INSTALLATION.md](INSTALLATION.md).
 
