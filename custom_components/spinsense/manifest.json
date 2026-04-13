@@ -1,0 +1,19 @@
+{
+    "domain": "spinsense",
+    "name": "SpinSense",
+    "codeowners": [
+        "@fwump38"
+    ],
+    "requirements": [],
+    "version": "0.0.1",
+    "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
+    "documentation": "https://github.com/fwump38/SpinSense#readme",
+    "homeassistant": "2024.3.0",
+    "zip_release": true,
+    "config_flow": true,
+    "zeroconf": [
+        "_spinsense._tcp.local."
+    ],
+    "documentation_url": "https://github.com/fwump38/SpinSense",
+    "iot_class": "local_push"
+}

@@ -1,0 +1,17 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Connect to SpinSense Service",
+                "description": "Configure the SpinSense service connection.",
+                "data": {
+                    "host": "Service Host",
+                    "port": "Service Port"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to SpinSense service. Please check host and port."
+        }
+    }
+}

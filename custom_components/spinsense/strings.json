@@ -1,0 +1,14 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Connect to SpinSense Service",
+                "description": "Enter the host and port for the SpinSense HTTP service.",
+                "data": {
+                    "host": "Service Host",
+                    "port": "Service Port"
+                }
+            }
+        }
+    }
+}
