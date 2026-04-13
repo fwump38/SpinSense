@@ -94,6 +94,11 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
             self._album_art_url = None
 
     @property
+    def available(self) -> bool:
+        """Return True if the integration can reach the SpinSense service."""
+        return self._api.is_available()
+
+    @property
     def state(self) -> MediaPlayerState | None:
         """Return the state of the player."""
         return self._state

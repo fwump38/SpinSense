@@ -28,6 +28,7 @@ class SpinSenseAPI:
         self._ws = None
         self._task = None
         self._listeners = []
+        self._connected = False
         self.state = {
             "engine_active": False,
             "status_msg": "stopped",
@@ -36,7 +37,12 @@ class SpinSenseAPI:
         }
 
     async def async_initialize(self) -> None:
-        await self._refresh_status()
+        try:
+            await self._refresh_status()
+            self._connected = True
+        except Exception:
+            self._connected = False
+            raise
         self._task = self.hass.async_create_task(self._websocket_loop())
 
     async def async_stop(self) -> None:
@@ -81,6 +87,7 @@ class SpinSenseAPI:
         while True:
             try:
                 self._ws = await self.session.ws_connect(url, timeout=10)
+                self._connected = True
                 _LOGGER.info("Connected to SpinSense websocket at %s", url)
 
                 async for message in self._ws:
@@ -93,12 +100,18 @@ class SpinSenseAPI:
             except asyncio.CancelledError:
                 break
             except Exception as exc:
+                self._connected = False
                 _LOGGER.warning("SpinSense websocket connection lost: %s", exc)
             finally:
                 if self._ws is not None:
                     await self._ws.close()
                     self._ws = None
+                self._connected = False
             await asyncio.sleep(5)
+
+    def is_available(self) -> bool:
+        """Return whether SpinSense is currently connected."""
+        return self._connected
 
     def _handle_message(self, message: dict) -> None:
         if not isinstance(message, dict):

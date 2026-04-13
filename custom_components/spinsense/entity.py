@@ -14,7 +14,7 @@ class SpinSenseEntity(Entity):
         self.hass = hass
         self._config_entry = config_entry
         self._device_name = device_name
-        self._attr_has_entity_name = True
+        self._attr_has_entity_name = False
         self._attr_should_poll = False
 
     @property
