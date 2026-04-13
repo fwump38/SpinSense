@@ -38,5 +38,4 @@ Initial release of SpinSense.
 - Web GUI for configuration and calibration
 - Multi-arch Docker builds (amd64/arm64)
 - Support for USB audio devices
-- Real-time track metadata updates via HTTP/WebSocket</content>
-<parameter name="filePath">/Users/dmirch/git/SpinSense/CHANGELOG.md
+- Real-time track metadata updates via HTTP/WebSocket

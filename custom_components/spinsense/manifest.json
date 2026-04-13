@@ -2,7 +2,7 @@
     "domain": "spinsense",
     "name": "SpinSense",
     "codeowners": [
-        "@dmirch"
+        "@fwump38"
     ],
     "requirements": [],
     "version": "0.1.1",
