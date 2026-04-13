@@ -45,7 +45,7 @@ SpinSense can run on small ARM systems such as Raspberry Pi Zero 2W (or similar)
 
 - Single Board Computer like Raspberry Pi Zero 2W
 - Docker installed on the device
-- USB audio interface connected to the board
+- RCA-to-USB audio capture adapter or USB audio interface connected to the board
 
 ### Quick start
 
@@ -104,9 +104,9 @@ Use a `.env` file or Portainer stack environment section to control runtime sett
 ### Notes for Pi Zero
 
 - The Docker setup already exposes USB audio access via `/dev/snd` and host IPC.
-- Use a USB audio interface with a supported sample rate; `48000` is preferred if available.
+- Use an RCA-to-USB capture adapter or USB audio interface with a supported sample rate; `48000` is preferred if available.
 - If `48000` isn't supported, try `44100` or `16000`.
-- Connect a USB audio interface with an input device; the engine will auto-detect USB audio if `AUDIO_DEVICE` is blank.
+- Connect a USB audio capture device with an input channel; the engine will auto-detect USB audio if `AUDIO_DEVICE` is blank.
 
 ## 3. Recommended Setup
 

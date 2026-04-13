@@ -1,8 +1,56 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // --- 1. WebSocket Connection (Live Data) ---
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/live-status`;
     const ws = new WebSocket(wsUrl);
+
+    const startButton = document.getElementById('btn-start');
+    const stopButton = document.getElementById('btn-stop');
+
+    function updateEngineControls(statusMsg, engineActive) {
+        const badge = document.getElementById('engine-status-badge');
+        const normalized = String(statusMsg || '').toLowerCase();
+
+        if (normalized === 'playing') {
+            badge.innerText = 'Engine: Playing';
+            badge.className = 'badge success';
+        } else if (normalized === 'stopped') {
+            badge.innerText = 'Engine: Stopped';
+            badge.className = 'badge stopped';
+        } else {
+            badge.innerText = 'Engine: Listening';
+            badge.className = 'badge warning';
+        }
+
+        if (engineActive) {
+            startButton.innerText = 'Stop Listening';
+            startButton.className = 'btn danger';
+            startButton.dataset.active = 'true';
+        } else {
+            startButton.innerText = 'Start Listening';
+            startButton.className = 'btn success';
+            startButton.dataset.active = 'false';
+        }
+        stopButton.disabled = false;
+    }
+
+    function updateTrackMetadata(payload) {
+        if (payload.track && payload.track.title) {
+            document.getElementById('track-title').innerText = payload.track.title;
+            document.getElementById('track-artist').innerText = payload.track.artist || 'Unknown Artist';
+            document.getElementById('track-album').innerText = payload.track.album || 'Unknown Album';
+
+            const artImg = document.getElementById('album-art');
+            if (payload.track.art_url) {
+                artImg.src = payload.track.art_url;
+            }
+        } else if (payload.status_msg === 'Listening' || payload.status_msg === 'Stopped') {
+            document.getElementById('track-title').innerText = 'Waiting for drop...';
+            document.getElementById('track-artist').innerText = 'Artist';
+            document.getElementById('track-album').innerText = 'Album';
+            document.getElementById('album-art').src = '/static/placeholder.jpg';
+        }
+    }
 
     ws.onmessage = (event) => {
         try {
@@ -18,37 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('volume-bar').style.width = `${percent}%`;
                 }
 
-                // Update Track Metadata
-                if (payload.track && payload.track.title !== "") {
-                    // A song is currently identified!
-                    document.getElementById('track-title').innerText = payload.track.title;
-                    document.getElementById('track-artist').innerText = payload.track.artist || "Unknown Artist";
-                    document.getElementById('track-album').innerText = payload.track.album || "Unknown Album";
-
-                    const artImg = document.getElementById('album-art');
-                    if (payload.track.art_url) {
-                        artImg.src = payload.track.art_url;
-                    }
-                } else if (payload.status_msg === "Listening") {
-                    // Reset to default when waiting for a song
-                    document.getElementById('track-title').innerText = "Waiting for drop...";
-                    document.getElementById('track-artist').innerText = "Artist";
-                    document.getElementById('track-album').innerText = "Album";
-                    document.getElementById('album-art').src = "/static/placeholder.jpg";
-                }
-
-                // Update Engine Status Badge
-                const badge = document.getElementById('engine-status-badge');
-                if (payload.status_msg === "Playing") {
-                    badge.innerText = "Engine: Playing";
-                    badge.className = "badge success";
-                } else {
-                    badge.innerText = "Engine: Listening";
-                    badge.className = "badge warning";
-                }
+                updateTrackMetadata(payload);
+                updateEngineControls(payload.status_msg, payload.engine_active);
             }
         } catch (error) {
-            console.error("WebSocket payload error:", error);
+            console.error('WebSocket payload error:', error);
         }
     };
 
@@ -89,7 +111,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (config.Audio.Song_Sample_Length) document.getElementById('sample-len').value = config.Audio.Song_Sample_Length;
             }
         } catch (error) {
-            console.error("Failed to load config:", error);
+            console.error('Failed to load config:', error);
+        }
+    }
+
+    async function loadStatus() {
+        try {
+            const res = await fetch('/api/status');
+            const status = await res.json();
+
+            if (status.rms_level !== undefined) {
+                document.getElementById('volume-text').innerText = status.rms_level.toFixed(4);
+                let percent = Math.min((status.rms_level / 0.05) * 100, 100);
+                document.getElementById('volume-bar').style.width = `${percent}%`;
+            }
+
+            updateTrackMetadata(status);
+            updateEngineControls(status.status_msg, status.engine_active);
+        } catch (error) {
+            console.error('Failed to load engine status:', error);
         }
     }
 
@@ -119,16 +159,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. Start/Stop Engine Buttons ---
     document.getElementById('btn-start').addEventListener('click', async () => {
-        await fetch('/api/engine/start', { method: 'POST' });
+        const isActive = startButton.dataset.active === 'true';
+        const action = isActive ? '/api/engine/stop' : '/api/engine/start';
+
+        try {
+            await fetch(action, { method: 'POST' });
+            if (isActive) {
+                updateEngineControls('Stopped', false);
+            } else {
+                updateEngineControls('Listening', true);
+            }
+        } catch (error) {
+            console.error('Failed to toggle engine state:', error);
+        }
     });
 
     document.getElementById('btn-stop').addEventListener('click', async () => {
-        await fetch('/api/engine/stop', { method: 'POST' });
-        const badge = document.getElementById('engine-status-badge');
-        badge.innerText = "Engine: Stopped";
-        badge.className = "badge stopped";
+        try {
+            await fetch('/api/engine/stop', { method: 'POST' });
+            updateEngineControls('Stopped', false);
+        } catch (error) {
+            console.error('Failed to stop engine:', error);
+        }
     });
 
     // Initialize everything on page load
-    loadConfigAndDevices();
-}); f
+    await loadStatus();
+    await loadConfigAndDevices();
+});

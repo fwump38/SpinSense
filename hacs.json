@@ -5,7 +5,7 @@
         "integration"
     ],
     "render_readme": true,
-    "homeassistant": "2024.3.0",
+    "homeassistant": "2026.3.0",
     "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
     "documentation": "https://github.com/fwump38/SpinSense#readme"
 }

@@ -16,6 +16,8 @@ Integrate your analogue record player into your digital life. This tool uses aud
 
 - Guided Onboarding: A built-in Web GUI helps you calibrate your audio thresholds.
 
+- RCA-to-USB Capture Support: Use an RCA-to-USB audio capture adapter or USB audio interface with an analog line/mic input. This is a capture device, not a USB storage-style flash drive.
+
 ## 🚀 How It Works
 - SpinSense doesn't just "guess." It monitors the RMS volume of your input device. When the needle drops:
 
