@@ -3,6 +3,8 @@ Integrate your analogue record player into your digital life. This tool uses aud
 
 ![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Ffwump38%2Fspinsense-blue) 
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?category=Integration&repository=spinsense&owner=fwump38)
+
 ## ✨ Features
 - Automatic ID: Powered by songrec (Shazam-compatible) for high-accuracy track recognition.
 
