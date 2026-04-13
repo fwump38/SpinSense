@@ -69,7 +69,7 @@ Common configuration variables:
 - `AUDIO_SAMPLE_LENGTH` — recording length in seconds (default: `5.0`)
 - `AUDIO_SAMPLE_RATE` — sample rate in Hz (default: `48000`)
 - `SILENCE_INTERVAL` — silence timeout in seconds (default: `5.0`)
-- `LOG_LEVEL` — logging verbosity (default: `INFO`)
+- `LOG_LEVEL` — logging verbosity (default: `info`)
 
 If you still want to override settings from a JSON file, `config.json` remains supported but is no longer required.
 
@@ -96,7 +96,7 @@ services:
       - AUDIO_SAMPLE_LENGTH=${AUDIO_SAMPLE_LENGTH:-5.0}
       - AUDIO_SAMPLE_RATE=${AUDIO_SAMPLE_RATE:-48000}
       - SILENCE_INTERVAL=${SILENCE_INTERVAL:-5.0}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
 ```
 
 Use a `.env` file or Portainer stack environment section to control runtime settings.
