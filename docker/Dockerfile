@@ -1,4 +1,4 @@
-ARG PYTHON_BASE=python:3.11-slim-bullseye
+ARG PYTHON_BASE=python:3.11-slim-bookworm
 FROM ${PYTHON_BASE}
 
 # The default image is multi-arch and supports amd64 and arm64 hosts,
@@ -14,13 +14,11 @@ WORKDIR /app
 # Install system dependencies
 # Including dev packages needed for sounddevice and numpy compilation
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-dev \
     portaudio19-dev \
     alsa-utils \
     libsndfile1 \
     libffi-dev \
-    gcc \
-    g++ \
-    make \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements from the main folder
