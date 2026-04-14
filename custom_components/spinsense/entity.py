@@ -24,5 +24,5 @@ class SpinSenseEntity(Entity):
             identifiers={(DOMAIN, self._config_entry.entry_id)},
             name=self._device_name,
             manufacturer="SpinSense",
-            model="Vinyl Record Player",
+            model="Turn Table",
         )

@@ -1,7 +1,7 @@
 """Constants for the SpinSense integration."""
 
 DOMAIN = "spinsense"
-DEFAULT_NAME = "Vinyl Record Player"
+DEFAULT_NAME = "Turn Table"
 
 # Config keys
 CONF_HOST = "host"

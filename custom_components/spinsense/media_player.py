@@ -39,10 +39,10 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the media player."""
-        super().__init__(hass, config_entry, "Vinyl Record Player")
+        super().__init__(hass, config_entry, "Turn Table")
 
         self._attr_unique_id = f"{DOMAIN}_{config_entry.entry_id}"
-        self._attr_name = "Vinyl Record Player"
+        self._attr_name = "Turn Table"
 
         self._api = self.hass.data[DOMAIN][config_entry.entry_id]["api"]
 

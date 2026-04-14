@@ -16,7 +16,7 @@ This repository contains two complementary pieces:
 5. Restart Home Assistant.
 6. Open `Settings -> Devices & Services -> Add Integration` and add `SpinSense`.
 6. Home Assistant should discover the SpinSense service automatically via zeroconf.
-8. After setup, the `Vinyl Record Player` media player entity will appear in Home Assistant.
+8. After setup, the `Turn Table` media player entity will appear in Home Assistant.
 
 ### Option B: Manual installation
 
@@ -35,7 +35,7 @@ This repository contains two complementary pieces:
 
 5. Home Assistant should detect your SpinSense service automatically over the local network.
 
-6. After setup, the `Vinyl Record Player` media player entity will appear in Home Assistant.
+6. After setup, the `Turn Table` media player entity will appear in Home Assistant.
 
 ## 2. Standalone Engine (Docker) for single-board computers
 

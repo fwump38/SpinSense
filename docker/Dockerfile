@@ -7,7 +7,7 @@ FROM ${PYTHON_BASE}
 # only matters for Docker installation and hardware access, not the image internals.
 
 LABEL maintainer="SpinSense Contributors"
-LABEL description="SpinSense - Vinyl Record Player integration for Home Assistant"
+LABEL description="SpinSense - Turn Table integration for Home Assistant"
 
 WORKDIR /app
 
