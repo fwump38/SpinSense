@@ -116,8 +116,99 @@ For the cleanest experience:
 - Configure runtime settings with environment variables instead of mounting `config.json`.
 - Ensure the SpinSense service is reachable from Home Assistant on port `8000`.
 
+## 3.5. Configuring USB Audio Devices
+
+When you connect a USB audio interface (such as an RCA-to-USB adapter labeled "ClearClick: USB Audio"), follow these steps to ensure it's properly detected and configured:
+
+### Step 1: Verify Device Detection
+
+The web UI at `http://localhost:8000` displays "Available Audio Input Devices" in the logs. You can also query available devices via:
+
+```bash
+curl http://localhost:8000/api/devices
+```
+
+Look for your USB device in the list (e.g., "ClearClick: USB Audio (hw:2,0)").
+
+### Step 2: Configure the Device
+
+**Option A: Environment Variable (Recommended for Docker)**
+
+Set the `AUDIO_DEVICE` environment variable to the exact device name before starting the container:
+
+```yaml
+# docker-compose.yml
+services:
+  spinsense:
+    # ... other settings ...
+    environment:
+      - AUDIO_DEVICE=ClearClick: USB Audio (hw:2,0)
+      - AUDIO_SAMPLE_RATE=48000
+```
+
+Or create a `.env` file:
+
+```bash
+AUDIO_DEVICE=ClearClick: USB Audio (hw:2,0)
+AUDIO_SAMPLE_RATE=48000
+```
+
+**Option B: Web GUI**
+
+1. Open the SpinSense web UI at `http://localhost:8000`.
+2. Under **Configuration → Hardware**, select your USB device from the "Audio Input Device" dropdown.
+3. Click **Save Settings**.
+4. **Restart the engine** using the "Stop" button, then "Start Listening" to apply the changes.
+
+### Step 3: Verify Audio Levels
+
+After configuring the device:
+
+1. Play audio through your turntable.
+2. Check the "Audio Input Level (RMS)" meter in the web UI.
+3. If no meter movement, the device is not receiving audio — verify your turntable is connected and playing.
+
 ## 4. Troubleshooting
 
-- If the engine cannot find your USB audio device, set `AUDIO_DEVICE` to the device name or use `AUDIO_DEVICE_INDEX`.
+### USB Audio Device Not Detected or Not Switching
+
+**Problem**: The USB device appears in the device list but doesn't activate when selected in the GUI.
+
+**Solution**: 
+- The engine must be **restarted** for configuration changes to take effect.
+- Click the "Stop" button in the web UI to stop the engine.
+- Then click "Start Listening" to restart with the new device.
+- Check logs to confirm: "Audio Input Level (RMS)" meter should show activity when turntable plays.
+
+**Advanced**: Use Docker logs to see which device the engine detected on startup:
+
+```bash
+docker compose logs spinsense | grep "Audio Input Device"
+docker compose logs spinsense | grep "Available Audio Input"
+```
+
+### Device Not Found After Restart
+
+**Problem**: The selected device disappears from the dropdown or engine fails to start after restart.
+
+**Solution**:
+- Device names may vary. Check exact name from `/api/devices` endpoint or Docker logs.
+- Try using the numeric index instead: set `AUDIO_DEVICE_INDEX=2` (replace 2 with correct index).
+- Verify USB adapter is physically connected before starting the container.
+- Some adapters require specific sample rates — try `AUDIO_SAMPLE_RATE=44100` if `48000` fails.
+
+### Audio Recognition Fails
+
+**Problem**: Engine starts but never recognizes tracks, or "Audio Input Level" meter stays at zero.
+
+**Solution**:
+- Verify USB audio input: `arecord -l` (Linux/Pi)
+- Test recording: `arecord -D hw:2,0 -f S16_LE -r 48000 test.wav` (replace hw:2,0 with your device)
+- Play USB-captured audio: `aplay test.wav`
+- If meters show activity but no recognition, check Shazam connectivity and song audibility.
+
+### Home Assistant Integration Not Showing Device
+
 - If Home Assistant does not show the `SpinSense` integration, confirm the `custom_components/spinsense/` folder is in your HA config directory and restart HA.
-- If audio recognition fails, verify the USB audio input works using `arecord -l` and test with a recording tool.
+- Verify SpinSense API is accessible: `curl http://<local-ip>:8000/api/info` from Home Assistant.
+- Check Home Assistant logs for zeroconf discovery errors.

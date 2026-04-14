@@ -60,6 +60,10 @@ class SpinSenseEngine:
         device_name = self.config.get('MIC_DEVICE', DEFAULT_CONFIG['MIC_DEVICE'])
         device_index = self.config.get('MIC_DEVICE_INDEX')
         self.mic_device = device_index if device_index is not None else device_name
+        
+        # Log which device is being used
+        device_display = self.mic_device if self.mic_device is not None else "System Default"
+        _LOGGER.info(f"Audio Input Device: {device_display}")
 
         self.shazam = Shazam()
         self.state = {
@@ -242,6 +246,20 @@ class SpinSenseEngine:
     async def audio_monitor_loop(self) -> None:
         """Main audio monitoring loop."""
         _LOGGER.info("--- SPINSENSE ENGINE ACTIVE ---")
+        
+        # Log available audio devices for debugging
+        try:
+            devices = sd.query_devices()
+            input_devices = [d for d in devices if isinstance(d, dict) and d.get('max_input_channels', 0) > 0]
+            if input_devices:
+                _LOGGER.info("Available Audio Input Devices:")
+                for i, d in enumerate(input_devices):
+                    device_name = d.get('name', 'Unknown')
+                    channels = d.get('max_input_channels', 0)
+                    default_mark = " (DEFAULT)" if d.get('name') == sd.default.device[0] else ""
+                    _LOGGER.info(f"  [{i}] {device_name} - {channels} channels{default_mark}")
+        except Exception as e:
+            _LOGGER.debug(f"Could not list audio devices: {e}")
 
         def audio_callback(indata, frames, time, status):
             """Audio callback to calculate RMS level."""
