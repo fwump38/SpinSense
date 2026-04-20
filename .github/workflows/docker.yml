@@ -3,13 +3,6 @@ name: Build and Push Docker Image
 on:
   push:
     tags: ["v*.*.*"]
-    paths:
-      - "requirements.txt"
-      - "core/**"
-      - "gui/**"
-      - "core_engine.py"
-      - "docker/**"
-      - ".github/workflows/docker.yml"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -17,7 +10,43 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if relevant files changed since last tag
+        id: check
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${{ github.ref_name }}$" | head -1)
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, triggering build"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            CHANGED=$(git diff --name-only "$PREV_TAG" "${{ github.ref_name }}" -- \
+              requirements.txt \
+              core/ \
+              gui/ \
+              core_engine.py \
+              docker/ \
+              .github/workflows/docker.yml)
+            if [ -n "$CHANGED" ]; then
+              echo "Relevant files changed since $PREV_TAG"
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "No relevant files changed since $PREV_TAG, skipping build"
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   build-and-push:
+    needs: check-changes
+    if: needs.check-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
