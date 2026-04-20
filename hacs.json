@@ -1,6 +1,6 @@
 {
     "name": "SpinSense",
-    "content_in_root": false,
+    "content_in_root": true,
     "domains": [
         "integration"
     ],

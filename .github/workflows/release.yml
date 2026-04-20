@@ -1,59 +1,59 @@
 name: Release
 
 on:
-    push:
-        tags: ["v*.*.*"]
+  push:
+    tags: ["v*.*.*"]
 
 jobs:
-    check-changes:
-        runs-on: ubuntu-latest
-        outputs:
-            changed: ${{ steps.changes.outputs.changed }}
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
 
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Check for relevant changes
-              id: changes
-              run: |
-                  PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-                  if [ -z "$PREV_TAG" ]; then
-                    echo "changed=true" >> $GITHUB_OUTPUT
-                  else
-                    CHANGED=$(git diff --name-only "$PREV_TAG" HEAD -- custom_components/ hacs.json)
-                    if [ -n "$CHANGED" ]; then
-                      echo "changed=true" >> $GITHUB_OUTPUT
-                    else
-                      echo "changed=false" >> $GITHUB_OUTPUT
-                    fi
-                  fi
+      - name: Check for relevant changes
+        id: changes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            CHANGED=$(git diff --name-only "$PREV_TAG" HEAD -- custom_components/ hacs.json)
+            if [ -n "$CHANGED" ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-    release:
-        needs: check-changes
-        if: needs.check-changes.outputs.changed == 'true'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
+  release:
+    needs: check-changes
+    if: needs.check-changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Update manifest version
-              run: |
-                  VERSION=${GITHUB_REF_NAME#v}
-                  jq --arg v "$VERSION" '.version = $v' custom_components/spinsense/manifest.json > tmp.json
-                  mv tmp.json custom_components/spinsense/manifest.json
+      - name: Update manifest version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          jq --arg v "$VERSION" '.version = $v' custom_components/spinsense/manifest.json > tmp.json
+          mv tmp.json custom_components/spinsense/manifest.json
 
-            - name: Create zip
-              run: |
-                  cd custom_components
-                  zip -r ../spinsense.zip spinsense/
+      - name: Create zip
+        run: |
+          cd custom_components/spinsense
+          zip -r ../../spinsense.zip .
 
-            - name: Create release and upload zip
-              uses: softprops/action-gh-release@v2
-              with:
-                  files: spinsense.zip
+      - name: Create release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          files: spinsense.zip
