@@ -94,8 +94,10 @@ async def uds_server_callback(reader, writer):
                 pass
 
             # Broadcast this payload to every open browser tab
+            # Iterate over a snapshot to avoid RuntimeError if the set is
+            # modified during an await (e.g. a new browser tab connects).
             dead_sockets = set()
-            for ws in active_websockets:
+            for ws in list(active_websockets):
                 try:
                     await ws.send_text(payload)
                 except Exception:
@@ -183,14 +185,11 @@ def get_config():
     if device_index_str and not audio_device:
         try:
             idx = int(device_index_str)
-            devices = sd.query_devices()
-            if (
-                0 <= idx < len(devices)
-                and devices[idx].get("max_input_channels", 0) > 0
-            ):
-                config["Hardware"]["Mic_Device"] = devices[idx]["name"]
-        except Exception:
-            pass
+            # query_devices(idx, kind='input') raises ValueError if not an input device
+            device_info = sd.query_devices(idx, kind="input")
+            config["Hardware"]["Mic_Device"] = device_info["name"]
+        except Exception as e:
+            print(f"⚠️ Could not resolve AUDIO_DEVICE_INDEX={device_index_str}: {e}")
 
     return config
 
@@ -241,5 +240,8 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             await websocket.receive_text()
-    except WebSocketDisconnect:
-        active_websockets.remove(websocket)
+    except (WebSocketDisconnect, Exception):
+        # Use discard instead of remove: the socket may have already been
+        # pruned from active_websockets by the dead_sockets cleanup in
+        # uds_server_callback, so remove() would raise a KeyError.
+        active_websockets.discard(websocket)

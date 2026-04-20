@@ -53,10 +53,17 @@ def load_config() -> dict:
         save_config(defaults)
         config = defaults
 
-    # AUDIO_DEVICE env var takes precedence over file config
+    # Env vars take precedence over file config
     audio_device = os.getenv("AUDIO_DEVICE", "").strip()
     if audio_device:
         config["Hardware"]["Mic_Device"] = audio_device
+
+    audio_threshold = os.getenv("AUDIO_THRESHOLD", "").strip()
+    if audio_threshold:
+        try:
+            config["Audio"]["Volume_Threshold"] = float(audio_threshold)
+        except ValueError:
+            print(f"⚠️ Invalid AUDIO_THRESHOLD value: {audio_threshold!r}")
 
     return config
 

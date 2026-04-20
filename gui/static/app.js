@@ -1,12 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- 1. WebSocket Connection (Live Data) ---
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/live-status`;
-    const ws = new WebSocket(wsUrl);
-
     const startButton = document.getElementById('btn-start');
     const stopButton = document.getElementById('btn-stop');
 
+    // --- Helper: Update Engine Status Badge & Buttons ---
     function updateEngineControls(statusMsg, engineActive) {
         const badge = document.getElementById('engine-status-badge');
         const normalized = String(statusMsg || '').toLowerCase();
@@ -34,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         stopButton.disabled = false;
     }
 
+    // --- Helper: Update Now-Playing section ---
     function updateTrackMetadata(payload) {
         if (payload.track && payload.track.title) {
             document.getElementById('track-title').innerText = payload.track.title;
@@ -52,27 +49,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
+    // --- 1. WebSocket Connection (Live Data) with auto-reconnect ---
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/live-status`;
 
-            if (data.type === 'live_status') {
-                const payload = data.payload;
+    let ws = null;
+    let reconnectDelay = 1000; // ms; doubles on each failed attempt, capped at 30 s
 
-                // Update Volume Meter
-                if (payload.rms_level !== undefined) {
-                    document.getElementById('volume-text').innerText = payload.rms_level.toFixed(4);
-                    let percent = Math.min((payload.rms_level / 0.05) * 100, 100);
-                    document.getElementById('volume-bar').style.width = `${percent}%`;
+    function connectWebSocket() {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            reconnectDelay = 1000; // reset back-off on successful connect
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'live_status') {
+                    const payload = data.payload;
+
+                    // Update Volume Meter
+                    if (payload.rms_level !== undefined) {
+                        document.getElementById('volume-text').innerText = payload.rms_level.toFixed(4);
+                        let percent = Math.min((payload.rms_level / 0.05) * 100, 100);
+                        document.getElementById('volume-bar').style.width = `${percent}%`;
+                    }
+
+                    updateTrackMetadata(payload);
+                    updateEngineControls(payload.status_msg, payload.engine_active);
                 }
-
-                updateTrackMetadata(payload);
-                updateEngineControls(payload.status_msg, payload.engine_active);
+            } catch (error) {
+                console.error('WebSocket payload error:', error);
             }
-        } catch (error) {
-            console.error('WebSocket payload error:', error);
-        }
-    };
+        };
+
+        ws.onclose = () => {
+            // Reconnect with exponential back-off (max 30 s)
+            setTimeout(() => {
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+                connectWebSocket();
+            }, reconnectDelay);
+        };
+
+        ws.onerror = () => {
+            ws.close(); // triggers onclose which handles reconnection
+        };
+    }
+
+    connectWebSocket();
 
     // --- 2. Load Config & Devices (Fixes the blank boxes) ---
     async function loadConfigAndDevices() {
