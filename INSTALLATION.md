@@ -194,17 +194,17 @@ Record 5 seconds in each of the three states below, then read the RMS amplitude.
 
 **No input (turntable off or disconnected):**
 ```bash
-arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/off.wav && sox /tmp/off.wav -n stat 2>&1 | grep "RMS amplitude"
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/off.wav && sox /tmp/off.wav -n stat 2>&1 | grep RMS
 ```
 
 **Needle on record, turntable stopped (idle hum/noise only):**
 ```bash
-arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/stopped.wav && sox /tmp/stopped.wav -n stat 2>&1 | grep "RMS amplitude"
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/stopped.wav && sox /tmp/stopped.wav -n stat 2>&1 | grep RMS
 ```
 
 **Record playing:**
 ```bash
-arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/playing.wav && sox /tmp/playing.wav -n stat 2>&1 | grep "RMS amplitude"
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/playing.wav && sox /tmp/playing.wav -n stat 2>&1 | grep RMS
 ```
 
 Set `AUDIO_THRESHOLD` to a value roughly halfway between the **stopped** and **playing** RMS readings. For example, if stopped reads `0.004` and playing reads `0.040`, use `0.015`.
