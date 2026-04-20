@@ -53,6 +53,7 @@ class SpinSenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         host = discovery_info.host
         if isinstance(host, bytes):
             host = host.decode("utf-8")
+        host = str(host)
 
         port = discovery_info.port
         unique_id = f"{host}:{port}"

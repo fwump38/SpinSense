@@ -8,9 +8,10 @@ from aiohttp import WSMsgType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN, CONF_HOST, CONF_PORT
+from .const import CONF_HOST, CONF_PORT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,12 +39,7 @@ class SpinSenseAPI:
         }
 
     async def async_initialize(self) -> None:
-        try:
-            await self._refresh_status()
-            self._connected = True
-        except Exception:
-            self._connected = False
-            raise
+        await self._refresh_status()
         self._task = self.hass.async_create_task(self._websocket_loop())
 
     async def async_stop(self) -> None:
@@ -74,9 +70,12 @@ class SpinSenseAPI:
             response = await self._request("api/status")
             self._update_state(response)
             self._http_available = True
+            self._connected = True
         except Exception as exc:
             self._http_available = False
+            self._connected = False
             _LOGGER.warning("Could not fetch initial SpinSense status: %s", exc)
+            raise
 
     async def _request(self, path: str) -> dict:
         url = f"http://{self.host}:{self.port}/{path.lstrip('/')}"
@@ -105,7 +104,10 @@ class SpinSenseAPI:
             except Exception as exc:
                 self._connected = False
                 _LOGGER.warning("SpinSense websocket connection lost: %s", exc)
-                await self._refresh_status()
+                try:
+                    await self._refresh_status()
+                except Exception:
+                    pass
             finally:
                 if self._ws is not None:
                     await self._ws.close()
@@ -121,7 +123,9 @@ class SpinSenseAPI:
         if not isinstance(message, dict):
             return
 
-        payload = message.get("payload") if message.get("type") == "live_status" else message
+        payload = (
+            message.get("payload") if message.get("type") == "live_status" else message
+        )
         if isinstance(payload, dict):
             self._update_state(payload)
 
@@ -129,16 +133,26 @@ class SpinSenseAPI:
         if not isinstance(payload, dict):
             return
 
-        self.state["engine_active"] = payload.get("engine_active", self.state["engine_active"])
+        self.state["engine_active"] = payload.get(
+            "engine_active", self.state["engine_active"]
+        )
         self.state["status_msg"] = payload.get("status_msg", self.state["status_msg"])
         self.state["rms_level"] = payload.get("rms_level", self.state["rms_level"])
 
         track = payload.get("track", {})
         if isinstance(track, dict):
-            self.state["track"]["title"] = track.get("title", self.state["track"]["title"])
-            self.state["track"]["artist"] = track.get("artist", self.state["track"]["artist"])
-            self.state["track"]["album"] = track.get("album", self.state["track"]["album"])
-            self.state["track"]["art_url"] = track.get("art_url", self.state["track"]["art_url"])
+            self.state["track"]["title"] = track.get(
+                "title", self.state["track"]["title"]
+            )
+            self.state["track"]["artist"] = track.get(
+                "artist", self.state["track"]["artist"]
+            )
+            self.state["track"]["album"] = track.get(
+                "album", self.state["track"]["album"]
+            )
+            self.state["track"]["art_url"] = track.get(
+                "art_url", self.state["track"]["art_url"]
+            )
 
         self._notify_listeners()
 
@@ -154,8 +168,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await api.async_initialize()
     except Exception as exc:
-        _LOGGER.error("Failed to initialize SpinSense API: %s", exc)
-        return False
+        _LOGGER.warning("SpinSense not reachable, will retry: %s", exc)
+        raise ConfigEntryNotReady(
+            f"Cannot connect to SpinSense at {host}:{port}"
+        ) from exc
 
     hass.data[DOMAIN][entry.entry_id] = {
         "config": entry.data,
