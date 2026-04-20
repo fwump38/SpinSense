@@ -59,6 +59,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            PYTHON_BASE=python:3.11-slim-bookworm
+            PYTHON_BASE=python:3.11-slim-trixie
           cache-from: type=gha
           cache-to: type=gha,mode=max
