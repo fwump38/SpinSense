@@ -39,7 +39,11 @@ This project is built to be modular and Docker-first:
 
 /gui: A lightweight FastAPI web interface and dashboard.
 
-/docker: Multi-stage Docker build (Rust builder for songrec + Python runtime).
+/docker: Multi-stage Docker build (pre-built songrec binary + Python runtime).
+
+/.github/workflows/docker.yml: Builds and publishes the SpinSense image on every version tag.
+
+/.github/workflows/songrec-builder.yml: Builds the songrec binary base image — run once on first setup, then manually to update songrec.
 
 ## 🏗 Installation
 
@@ -59,5 +63,5 @@ This repository is HACS-ready. To install it with HACS:
 
 > Note: Configuration is via environment variables only. See [INSTALLATION.md](INSTALLATION.md) for details.
 
-For complete installation steps, see [INSTALLATION.md](INSTALLATION.md).
+For complete installation steps, including how to update songrec, see [INSTALLATION.md](INSTALLATION.md).
 

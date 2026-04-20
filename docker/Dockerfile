@@ -1,20 +1,9 @@
 ARG PYTHON_BASE=python:3.11-slim-trixie
 
-# --- Stage 1: Build songrec CLI from source (no GUI dependencies) ---
-# Requires rust:1-slim-trixie (Debian 13): libsoup-3.0-dev >=3.4 is needed by soup3 crate feature v3_4
-FROM rust:1-slim-trixie AS songrec-builder
-
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    build-essential \
-    libasound2-dev \
-    libclang-dev \
-    libglib2.0-dev \
-    libsoup-3.0-dev \
-    libssl-dev \
-    pkg-config \
-    && cargo install songrec --no-default-features \
-    && rm -rf /var/lib/apt/lists/*
+# --- Stage 1: Pull pre-built songrec binary from cached builder image ---
+# Rebuild this image by running the songrec-builder workflow manually or on Dockerfile changes.
+# See .github/workflows/songrec-builder.yml
+FROM ghcr.io/fwump38/spinsense/songrec-builder:latest AS songrec-builder
 
 # --- Stage 2: Runtime image ---
 FROM ${PYTHON_BASE}

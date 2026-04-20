@@ -55,7 +55,9 @@ Configure your audio settings using environment variables, then run the containe
 docker compose up -d
 ```
 
-The Docker image is automatically built and published to GitHub Container Registry (GHCR) on every push to the main branch.
+The Docker image is automatically built and published to GitHub Container Registry (GHCR) on every version tag push.
+
+> **How builds work**: The songrec binary is compiled once into a separate base image (`songrec-builder`). Release builds pull this prebuilt binary rather than recompiling from source — this keeps release builds fast (under 5 minutes). See [Updating songrec](#updating-songrec) if you need to rebuild the binary.
 
 ### Configuration
 
@@ -206,7 +208,27 @@ arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/playing.wav && sox /tmp/play
 
 Set `AUDIO_THRESHOLD` to a value roughly halfway between the **stopped** and **playing** RMS readings. For example, if stopped reads `0.004` and playing reads `0.040`, use `0.015`.
 
-## 4. Troubleshooting
+## 4. Updating songrec
+
+The songrec binary is compiled once into a dedicated base image (`ghcr.io/fwump38/spinsense/songrec-builder:latest`) and reused by every release build. You only need to rebuild it when you want a newer version of songrec.
+
+### When to update
+
+- A new version of [songrec](https://github.com/marin-m/songrec) has been released and you want to pick it up.
+- The Rust build environment or base image needs updating.
+
+### How to update
+
+1. Go to the **Actions** tab in GitHub.
+2. Select the **"Build songrec Base Image"** workflow.
+3. Click **"Run workflow"** → choose the `main` branch → **"Run workflow"**.
+4. Wait for all jobs to complete (typically 10–20 minutes the first time; faster on subsequent runs due to GHA layer caching).
+5. The new `songrec-builder:latest` multi-arch image is now published to GHCR.
+6. Push a new version tag to trigger a release build — it will automatically pull the updated binary.
+
+> The `songrec-builder` workflow also runs automatically whenever `docker/Dockerfile` is changed on `main`, so you don't need to run it manually after Dockerfile edits.
+
+## 5. Troubleshooting
 
 ### USB Audio Device Not Detected or Not Switching
 
