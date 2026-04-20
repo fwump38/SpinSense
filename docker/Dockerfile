@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libasound2-dev \
     libclang-dev \
+    libsoup-3.0-dev \
     libssl-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
