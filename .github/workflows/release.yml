@@ -5,10 +5,10 @@ on:
         tags: ["v*.*.*"]
 
 jobs:
-    release:
+    check-changes:
         runs-on: ubuntu-latest
-        permissions:
-            contents: write
+        outputs:
+            changed: ${{ steps.changes.outputs.changed }}
 
         steps:
             - uses: actions/checkout@v4
@@ -30,21 +30,30 @@ jobs:
                     fi
                   fi
 
+    release:
+        needs: check-changes
+        if: needs.check-changes.outputs.changed == 'true'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
             - name: Update manifest version
-              if: steps.changes.outputs.changed == 'true'
               run: |
                   VERSION=${GITHUB_REF_NAME#v}
                   jq --arg v "$VERSION" '.version = $v' custom_components/spinsense/manifest.json > tmp.json
                   mv tmp.json custom_components/spinsense/manifest.json
 
             - name: Create zip
-              if: steps.changes.outputs.changed == 'true'
               run: |
                   cd custom_components
                   zip -r ../spinsense.zip spinsense/
 
             - name: Create release and upload zip
-              if: steps.changes.outputs.changed == 'true'
               uses: softprops/action-gh-release@v2
               with:
                   files: spinsense.zip
