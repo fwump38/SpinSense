@@ -40,7 +40,9 @@ class SpinSenseAPI:
 
     async def async_initialize(self) -> None:
         await self._refresh_status()
-        self._task = self.hass.async_create_task(self._websocket_loop())
+        self._task = self.hass.async_create_background_task(
+            self._websocket_loop(), "spinsense_websocket_loop"
+        )
 
     async def async_stop(self) -> None:
         if self._task:

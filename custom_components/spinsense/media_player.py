@@ -31,7 +31,7 @@ async def async_setup_entry(
 class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
     """Representation of SpinSense as a media player."""
 
-    _attr_supported_features = 0
+    _attr_supported_features = MediaPlayerEntityFeature(0)
 
     def __init__(
         self,
