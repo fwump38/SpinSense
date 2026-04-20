@@ -7,6 +7,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    MediaType,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -121,8 +122,13 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
         return self._album
 
     @property
-    def entity_picture(self) -> str | None:
-        """Return the album art."""
+    def media_content_type(self) -> str | None:
+        """Return the content type of current playing media."""
+        return MediaType.MUSIC if self._title else None
+
+    @property
+    def media_image_url(self) -> str | None:
+        """Return the album art URL."""
         return self._album_art_url
 
     async def async_play_media(
