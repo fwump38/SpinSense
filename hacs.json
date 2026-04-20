@@ -5,6 +5,8 @@
     ],
     "render_readme": true,
     "homeassistant": "2026.3.0",
+    "content_in_root": false,
+    "zip_release": false,
     "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
     "documentation": "https://github.com/fwump38/SpinSense#readme"
 }
