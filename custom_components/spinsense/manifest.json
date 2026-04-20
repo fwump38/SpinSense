@@ -5,7 +5,7 @@
         "@fwump38"
     ],
     "requirements": [],
-    "version": "0.1.2",
+    "version": "0.1.4",
     "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
     "documentation": "https://github.com/fwump38/SpinSense#readme",
     "config_flow": true,
