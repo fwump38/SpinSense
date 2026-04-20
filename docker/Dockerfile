@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-RUN PKG_CONFIG_PATH="/usr/lib/$(gcc -dumpmachine)/pkgconfig:/usr/share/pkgconfig" \
+RUN export PKG_CONFIG_PATH="$(find /usr/lib /usr/local/lib -name 'libsoup-3.0.pc' -exec dirname {} \; 2>/dev/null | head -1):/usr/lib/$(gcc -dumpmachine)/pkgconfig:/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/share/pkgconfig" && \
     cargo install songrec --no-default-features
 
 # --- Stage 2: Runtime image ---
