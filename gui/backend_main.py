@@ -3,14 +3,14 @@ import json
 import os
 import socket
 from contextlib import asynccontextmanager
+
+import sounddevice as sd
+from config_manager import load_config, save_config
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import sounddevice as sd
-
-from config_manager import load_config, save_config
-from zeroconf.asyncio import AsyncZeroconf
 from zeroconf import ServiceInfo
+from zeroconf.asyncio import AsyncZeroconf
 
 # This set holds all connected web browsers
 active_websockets = set()
@@ -85,7 +85,7 @@ async def uds_server_callback(reader, writer):
     try:
         data = await reader.readline()
         if data:
-            payload = data.decode('utf-8')
+            payload = data.decode("utf-8")
             try:
                 parsed = json.loads(payload)
                 if isinstance(parsed, dict) and parsed.get("type") == "live_status":
@@ -111,7 +111,7 @@ async def uds_server_callback(reader, writer):
 
 async def start_uds_listener():
     """Starts the Unix Domain Socket server."""
-    socket_path = '/tmp/spinsense.sock'
+    socket_path = "/tmp/spinsense.sock"
     if os.path.exists(socket_path):
         os.remove(socket_path)
 
@@ -141,6 +141,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # --- Routes ---
+
 
 @app.get("/")
 async def index(request: Request):
@@ -173,7 +174,25 @@ def get_health():
 
 @app.get("/api/config")
 def get_config():
-    return load_config()
+    config = load_config()
+
+    # If only AUDIO_DEVICE_INDEX is set (no AUDIO_DEVICE), resolve index to device name
+    # so the GUI dropdown pre-selects the correct device
+    device_index_str = os.getenv("AUDIO_DEVICE_INDEX", "").strip()
+    audio_device = os.getenv("AUDIO_DEVICE", "").strip()
+    if device_index_str and not audio_device:
+        try:
+            idx = int(device_index_str)
+            devices = sd.query_devices()
+            if (
+                0 <= idx < len(devices)
+                and devices[idx].get("max_input_channels", 0) > 0
+            ):
+                config["Hardware"]["Mic_Device"] = devices[idx]["name"]
+        except Exception:
+            pass
+
+    return config
 
 
 @app.post("/api/config")
@@ -188,8 +207,8 @@ def get_audio_devices():
     """Returns mic devices as objects so the frontend JS can read them."""
     try:
         devices = sd.query_devices()
-        mics = [{"name": d['name']} for d in devices if d['max_input_channels'] > 0]
-        unique_mics = list({m['name']: m for m in mics}.values())
+        mics = [{"name": d["name"]} for d in devices if d["max_input_channels"] > 0]
+        unique_mics = list({m["name"]: m for m in mics}.values())
         return {"devices": unique_mics}
     except Exception as e:
         print(f"Error querying devices: {e}")

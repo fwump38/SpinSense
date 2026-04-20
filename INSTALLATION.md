@@ -122,13 +122,33 @@ When you connect a USB audio interface (such as an RCA-to-USB adapter labeled "C
 
 ### Step 1: Verify Device Detection
 
-The web UI at `http://localhost:8000` displays "Available Audio Input Devices" in the logs. You can also query available devices via:
+List all audio capture devices on the host:
+
+```bash
+arecord -l
+```
+
+Look for your USB adapter in the output (e.g., `card 2: CODEC [USB Audio CODEC]`). Note the card and device numbers — you'll need them in the steps below.
+
+You can also query available devices from the running container via:
 
 ```bash
 curl http://localhost:8000/api/devices
 ```
 
-Look for your USB device in the list (e.g., "ClearClick: USB Audio (hw:2,0)").
+### Step 1.5: Verify Supported Sample Rate
+
+Replace `hw:2,0` with your device's card and device numbers from Step 1.
+
+```bash
+# Test 48000 Hz (preferred)
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 1 /dev/null && echo "48000 Hz: supported" || echo "48000 Hz: not supported"
+
+# Test 44100 Hz (fallback)
+arecord -D hw:2,0 -f S16_LE -r 44100 -c 1 -d 1 /dev/null && echo "44100 Hz: supported" || echo "44100 Hz: not supported"
+```
+
+Set `AUDIO_SAMPLE_RATE` to the highest supported rate.
 
 ### Step 2: Configure the Device
 
@@ -167,6 +187,27 @@ After configuring the device:
 1. Play audio through your turntable.
 2. Check the "Audio Input Level (RMS)" meter in the web UI.
 3. If no meter movement, the device is not receiving audio — verify your turntable is connected and playing.
+
+### Step 4: Calibrate AUDIO_THRESHOLD
+
+Record 5 seconds in each of the three states below, then read the RMS amplitude. Replace `hw:2,0` with your device. Requires `sox` (`sudo apt install sox`).
+
+**No input (turntable off or disconnected):**
+```bash
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/off.wav && sox /tmp/off.wav -n stat 2>&1 | grep "RMS amplitude"
+```
+
+**Needle on record, turntable stopped (idle hum/noise only):**
+```bash
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/stopped.wav && sox /tmp/stopped.wav -n stat 2>&1 | grep "RMS amplitude"
+```
+
+**Record playing:**
+```bash
+arecord -D hw:2,0 -f S16_LE -r 48000 -c 1 -d 5 /tmp/playing.wav && sox /tmp/playing.wav -n stat 2>&1 | grep "RMS amplitude"
+```
+
+Set `AUDIO_THRESHOLD` to a value roughly halfway between the **stopped** and **playing** RMS readings. For example, if stopped reads `0.004` and playing reads `0.040`, use `0.015`.
 
 ## 4. Troubleshooting
 
