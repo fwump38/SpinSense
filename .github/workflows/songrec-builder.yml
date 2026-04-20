@@ -2,6 +2,7 @@ name: Build songrec Base Image
 
 on:
     workflow_dispatch:
+    workflow_call:
     push:
         paths:
             - "docker/Dockerfile"

@@ -44,8 +44,16 @@ jobs:
             fi
           fi
 
-  build-and-push:
+  ensure-builder:
     needs: check-changes
+    if: needs.check-changes.outputs.changed == 'true'
+    uses: ./.github/workflows/songrec-builder.yml
+    permissions:
+      contents: read
+      packages: write
+
+  build-and-push:
+    needs: [check-changes, ensure-builder]
     if: needs.check-changes.outputs.changed == 'true'
     strategy:
       matrix:
@@ -110,6 +118,7 @@ jobs:
   merge-manifest:
     needs:
       - check-changes
+      - ensure-builder
       - build-and-push
     if: needs.check-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
