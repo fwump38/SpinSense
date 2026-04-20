@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const startButton = document.getElementById('btn-start');
-    const stopButton = document.getElementById('btn-stop');
 
-    // --- Helper: Update Engine Status Badge & Buttons ---
+    // --- Helper: Update Engine Status Badge ---
     function updateEngineControls(statusMsg, engineActive) {
         const badge = document.getElementById('engine-status-badge');
         const normalized = String(statusMsg || '').toLowerCase();
@@ -10,24 +8,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (normalized === 'playing') {
             badge.innerText = 'Engine: Playing';
             badge.className = 'badge success';
-        } else if (normalized === 'stopped') {
+        } else if (normalized === 'stopped' || !engineActive) {
             badge.innerText = 'Engine: Stopped';
             badge.className = 'badge stopped';
         } else {
             badge.innerText = 'Engine: Listening';
             badge.className = 'badge warning';
         }
-
-        if (engineActive) {
-            startButton.innerText = 'Stop Listening';
-            startButton.className = 'btn danger';
-            startButton.dataset.active = 'true';
-        } else {
-            startButton.innerText = 'Start Listening';
-            startButton.className = 'btn success';
-            startButton.dataset.active = 'false';
-        }
-        stopButton.disabled = false;
     }
 
     // --- Helper: Update Now-Playing section ---
@@ -41,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (payload.track.art_url) {
                 artImg.src = payload.track.art_url;
             }
-        } else if (payload.status_msg === 'Listening' || payload.status_msg === 'Stopped') {
+        } else if (normalized(payload.status_msg) !== 'playing') {
             document.getElementById('track-title').innerText = 'Waiting for drop...';
             document.getElementById('track-artist').innerText = 'Artist';
             document.getElementById('track-album').innerText = 'Album';
@@ -49,31 +36,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function normalized(s) {
+        return String(s || '').toLowerCase();
+    }
+
     // --- 1. WebSocket Connection (Live Data) with auto-reconnect ---
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/live-status`;
 
     let ws = null;
-    let reconnectDelay = 1000; // ms; doubles on each failed attempt, capped at 30 s
+    let reconnectDelay = 1000;
 
     function connectWebSocket() {
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-            reconnectDelay = 1000; // reset back-off on successful connect
+            reconnectDelay = 1000;
         };
 
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
 
-                if (data.type === 'live_status') {
+                if (data.type === 'rms_update') {
+                    // Fast path: only update the RMS meter (~5 Hz)
+                    const rms = data.payload.rms_level;
+                    document.getElementById('volume-text').innerText = rms.toFixed(4);
+                    const percent = Math.min((rms / 0.05) * 100, 100);
+                    document.getElementById('volume-bar').style.width = `${percent}%`;
+
+                } else if (data.type === 'live_status') {
                     const payload = data.payload;
 
-                    // Update Volume Meter
                     if (payload.rms_level !== undefined) {
                         document.getElementById('volume-text').innerText = payload.rms_level.toFixed(4);
-                        let percent = Math.min((payload.rms_level / 0.05) * 100, 100);
+                        const percent = Math.min((payload.rms_level / 0.05) * 100, 100);
                         document.getElementById('volume-bar').style.width = `${percent}%`;
                     }
 
@@ -86,7 +83,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         ws.onclose = () => {
-            // Reconnect with exponential back-off (max 30 s)
             setTimeout(() => {
                 reconnectDelay = Math.min(reconnectDelay * 2, 30000);
                 connectWebSocket();
@@ -94,15 +90,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         ws.onerror = () => {
-            ws.close(); // triggers onclose which handles reconnection
+            ws.close();
         };
     }
 
     connectWebSocket();
 
-    // --- 2. Load Config & Devices (Fixes the blank boxes) ---
+    // --- 2. Load Config & Devices ---
     async function loadConfigAndDevices() {
-        // A. Load Devices for Dropdown
         try {
             const devRes = await fetch('/api/devices');
             const devData = await devRes.json();
@@ -124,17 +119,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Failed to load devices:", error);
         }
 
-        // B. Load Configuration values into the form
         try {
             const confRes = await fetch('/api/config');
             const config = await confRes.json();
 
-            if (config.Hardware && config.Hardware.Mic_Device) {
-                document.getElementById('mic-device').value = config.Hardware.Mic_Device;
+            if (config.device_name) {
+                document.getElementById('mic-device').value = config.device_name;
             }
-            if (config.Audio) {
-                if (config.Audio.Volume_Threshold) document.getElementById('vol-threshold').value = config.Audio.Volume_Threshold;
-                if (config.Audio.Song_Sample_Length) document.getElementById('sample-len').value = config.Audio.Song_Sample_Length;
+            if (config.threshold !== undefined) {
+                document.getElementById('vol-threshold').value = config.threshold;
+            }
+            if (config.sample_length !== undefined) {
+                document.getElementById('sample-len').value = config.sample_length;
             }
         } catch (error) {
             console.error('Failed to load config:', error);
@@ -161,52 +157,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- 3. Save Config Button ---
     document.getElementById('btn-save-config').addEventListener('click', async () => {
-        // Gather all inputs and build the JSON object
         const configPayload = {
-            Hardware: { Mic_Device: document.getElementById('mic-device').value },
-            Audio: {
-                Volume_Threshold: parseFloat(document.getElementById('vol-threshold').value),
-                Song_Sample_Length: parseFloat(document.getElementById('sample-len').value)
-            }
+            threshold: parseFloat(document.getElementById('vol-threshold').value),
+            sample_length: parseFloat(document.getElementById('sample-len').value),
         };
 
-        // Send to backend
         await fetch('/api/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(configPayload)
         });
 
-        // Brief visual feedback
         const btn = document.getElementById('btn-save-config');
         btn.innerText = "Saved!";
         setTimeout(() => { btn.innerText = "Save Settings"; }, 2000);
-    });
-
-    // --- 4. Start/Stop Engine Buttons ---
-    document.getElementById('btn-start').addEventListener('click', async () => {
-        const isActive = startButton.dataset.active === 'true';
-        const action = isActive ? '/api/engine/stop' : '/api/engine/start';
-
-        try {
-            await fetch(action, { method: 'POST' });
-            if (isActive) {
-                updateEngineControls('Stopped', false);
-            } else {
-                updateEngineControls('Listening', true);
-            }
-        } catch (error) {
-            console.error('Failed to toggle engine state:', error);
-        }
-    });
-
-    document.getElementById('btn-stop').addEventListener('click', async () => {
-        try {
-            await fetch('/api/engine/stop', { method: 'POST' });
-            updateEngineControls('Stopped', false);
-        } catch (error) {
-            console.error('Failed to stop engine:', error);
-        }
     });
 
     // Initialize everything on page load

@@ -58,7 +58,9 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
     async def async_added_to_hass(self) -> None:
         """Subscribe to SpinSense state updates."""
         await super().async_added_to_hass()
-        self._listener_remove = self._api.async_add_listener(self._async_handle_api_update)
+        self._listener_remove = self._api.async_add_listener(
+            self._async_handle_api_update
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe when removed."""
@@ -73,10 +75,12 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
     def _update_from_api(self) -> None:
         payload = self._api.state
         status = payload.get("status_msg", "").lower()
-        if status == "playing":
+        engine_active = payload.get("engine_active", False)
+
+        if not engine_active or status == "stopped":
+            self._state = MediaPlayerState.OFF
+        elif status == "playing":
             self._state = MediaPlayerState.PLAYING
-        elif status in {"paused"}:
-            self._state = MediaPlayerState.PAUSED
         else:
             self._state = MediaPlayerState.IDLE
 
@@ -86,10 +90,8 @@ class SpinSenseMediaPlayer(SpinSenseEntity, MediaPlayerEntity):
         self._album = track.get("album") or None
 
         art_url = track.get("art_url") or None
-        if art_url and art_url.startswith(("http://", "https://", "data:")):
+        if art_url and art_url.startswith(("http://", "https://")):
             self._album_art_url = art_url
-        elif art_url:
-            self._album_art_url = f"data:image/jpeg;base64,{art_url}"
         else:
             self._album_art_url = None
 

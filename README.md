@@ -12,7 +12,7 @@ Integrate your analogue record player into your digital life. This tool uses aud
 
 - Local HTTP/WebSocket service: Home Assistant connects directly to SpinSense for live status and track metadata.
 
-- Separate Audio Engine: The engine runs locally and the HA custom integration consumes live status from the service.
+- Single Process: The recognition engine and web GUI run as a single process — no separate daemons or IPC.
 
 - Multi-Arch Ready: Runs natively on Raspberry Pi, Orange Pi Zero 2W (DietPi), or x64 systems.
 
@@ -37,9 +37,9 @@ This project is built to be modular and Docker-first:
 
 /core: The Python-based recognition engine.
 
-/gui: A lightweight Flask/FastAPI web interface for configuration.
+/gui: A lightweight FastAPI web interface and dashboard.
 
-/docker: Multi-arch build files for Pi and NAS compatibility.
+/docker: Multi-stage Docker build (Rust builder for songrec + Python runtime).
 
 ## 🏗 Installation
 
@@ -57,7 +57,7 @@ This repository is HACS-ready. To install it with HACS:
 3. Add this repository URL: `https://github.com/fwump38/SpinSense`.
 4. Install `SpinSense` from HACS and restart Home Assistant.
 
-> Note: Standalone Docker deployment now supports configuration via environment variables only. A local `config.json` file is optional.
+> Note: Configuration is via environment variables only. See [INSTALLATION.md](INSTALLATION.md) for details.
 
 For complete installation steps, see [INSTALLATION.md](INSTALLATION.md).
 

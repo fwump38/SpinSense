@@ -59,7 +59,7 @@ The Docker image is automatically built and published to GitHub Container Regist
 
 ### Configuration
 
-SpinSense can run without `config.json`. Use environment variables instead.
+All configuration is via environment variables:
 
 Common configuration variables:
 
@@ -70,8 +70,6 @@ Common configuration variables:
 - `AUDIO_SAMPLE_RATE` — sample rate in Hz (default: `48000`)
 - `SILENCE_INTERVAL` — silence timeout in seconds (default: `5.0`)
 - `LOG_LEVEL` — logging verbosity (default: `info`)
-
-If you still want to override settings from a JSON file, `config.json` remains supported but is no longer required.
 
 Example `docker-compose.yml` service configuration:
 
@@ -113,7 +111,7 @@ Use a `.env` file or Portainer stack environment section to control runtime sett
 For the cleanest experience:
 
 - Use Docker to run the standalone recognition engine.
-- Configure runtime settings with environment variables instead of mounting `config.json`.
+- Configure runtime settings with environment variables.
 - Ensure the SpinSense service is reachable from Home Assistant on port `8000`.
 
 ## 3.5. Configuring USB Audio Devices
@@ -177,8 +175,7 @@ AUDIO_SAMPLE_RATE=48000
 
 1. Open the SpinSense web UI at `http://localhost:8000`.
 2. Under **Configuration → Hardware**, select your USB device from the "Audio Input Device" dropdown.
-3. Click **Save Settings**.
-4. **Restart the engine** using the "Stop" button, then "Start Listening" to apply the changes.
+3. Click **Save Settings**. Changes are applied in-memory immediately.
 
 ### Step 3: Verify Audio Levels
 
@@ -216,9 +213,8 @@ Set `AUDIO_THRESHOLD` to a value roughly halfway between the **stopped** and **p
 **Problem**: The USB device appears in the device list but doesn't activate when selected in the GUI.
 
 **Solution**: 
-- The engine must be **restarted** for configuration changes to take effect.
-- Click the "Stop" button in the web UI to stop the engine.
-- Then click "Start Listening" to restart with the new device.
+- Configuration changes made via the web UI or environment variables take effect in-memory.
+- For device changes, restart the container to reinitialize the audio input.
 - Check logs to confirm: "Audio Input Level (RMS)" meter should show activity when turntable plays.
 
 **Advanced**: Use Docker logs to see which device the engine detected on startup:
@@ -246,7 +242,7 @@ docker compose logs spinsense | grep "Available Audio Input"
 - Verify USB audio input: `arecord -l` (Linux/Pi)
 - Test recording: `arecord -D hw:2,0 -f S16_LE -r 48000 test.wav` (replace hw:2,0 with your device)
 - Play USB-captured audio: `aplay test.wav`
-- If meters show activity but no recognition, check Shazam connectivity and song audibility.
+- If meters show activity but no recognition, verify `songrec` is installed and the song is in the Shazam database.
 
 ### Home Assistant Integration Not Showing Device
 
