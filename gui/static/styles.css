@@ -114,3 +114,10 @@ input, select {
 }
 .badge.stopped { background: #555; }
 .badge.active { background: var(--success); color: #000; }
+.config-value {
+    display: block;
+    padding: 6px 0;
+    font-size: 0.95em;
+    color: var(--text-muted, #ccc);
+    font-family: monospace;
+}

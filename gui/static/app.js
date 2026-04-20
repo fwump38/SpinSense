@@ -96,42 +96,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     connectWebSocket();
 
-    // --- 2. Load Config & Devices ---
+    // --- 2. Load Config (read-only display) ---
     async function loadConfigAndDevices() {
-        try {
-            const devRes = await fetch('/api/devices');
-            const devData = await devRes.json();
-            const select = document.getElementById('mic-device');
-            select.innerHTML = '';
-
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = "default";
-            defaultOpt.textContent = "System Default";
-            select.appendChild(defaultOpt);
-
-            devData.devices.forEach(device => {
-                const opt = document.createElement('option');
-                opt.value = device.name;
-                opt.textContent = device.name;
-                select.appendChild(opt);
-            });
-        } catch (error) {
-            console.error("Failed to load devices:", error);
-        }
-
         try {
             const confRes = await fetch('/api/config');
             const config = await confRes.json();
 
-            if (config.device_name) {
-                document.getElementById('mic-device').value = config.device_name;
-            }
-            if (config.threshold !== undefined) {
-                document.getElementById('vol-threshold').value = config.threshold;
-            }
-            if (config.sample_length !== undefined) {
-                document.getElementById('sample-len').value = config.sample_length;
-            }
+            document.getElementById('cfg-device').innerText =
+                config.device_name !== null && config.device_name !== undefined
+                    ? config.device_name
+                    : 'System Default';
+            if (config.threshold !== undefined)
+                document.getElementById('cfg-threshold').innerText = config.threshold;
+            if (config.sample_length !== undefined)
+                document.getElementById('cfg-sample-len').innerText = config.sample_length;
+            if (config.sample_rate !== undefined)
+                document.getElementById('cfg-sample-rate').innerText = config.sample_rate;
+            if (config.silence_interval !== undefined)
+                document.getElementById('cfg-silence-interval').innerText = config.silence_interval;
         } catch (error) {
             console.error('Failed to load config:', error);
         }
@@ -154,24 +136,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Failed to load engine status:', error);
         }
     }
-
-    // --- 3. Save Config Button ---
-    document.getElementById('btn-save-config').addEventListener('click', async () => {
-        const configPayload = {
-            threshold: parseFloat(document.getElementById('vol-threshold').value),
-            sample_length: parseFloat(document.getElementById('sample-len').value),
-        };
-
-        await fetch('/api/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(configPayload)
-        });
-
-        const btn = document.getElementById('btn-save-config');
-        btn.innerText = "Saved!";
-        setTimeout(() => { btn.innerText = "Save Settings"; }, 2000);
-    });
 
     // Initialize everything on page load
     await loadStatus();

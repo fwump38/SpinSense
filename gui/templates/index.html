@@ -39,26 +39,30 @@
         <section class="card config-section">
             <div class="config-header">
                 <h2>Configuration</h2>
-                <button id="btn-save-config" class="btn primary">Save Settings</button>
             </div>
             
-            <form id="config-form" class="grid-form">
+            <div class="grid-form">
                 <fieldset>
                     <legend>Hardware</legend>
-                    <label for="mic-device">Audio Input Device</label>
-                    <select id="mic-device" name="Hardware.Mic_Device"></select>
+                    <label>Audio Input Device</label>
+                    <span id="cfg-device" class="config-value">—</span>
                 </fieldset>
 
                 <fieldset>
                     <legend>Audio Engine</legend>
-                    <label for="vol-threshold">Volume Threshold</label>
-                    <input type="number" id="vol-threshold" name="Audio.Volume_Threshold" step="0.0001">
-                    
-                    <label for="sample-len">Sample Length (sec)</label>
-                    <input type="number" id="sample-len" name="Audio.Song_Sample_Length" step="0.1">
-                </fieldset>
+                    <label>Volume Threshold</label>
+                    <span id="cfg-threshold" class="config-value">—</span>
 
-            </form>
+                    <label>Sample Length (sec)</label>
+                    <span id="cfg-sample-len" class="config-value">—</span>
+
+                    <label>Sample Rate (Hz)</label>
+                    <span id="cfg-sample-rate" class="config-value">—</span>
+
+                    <label>Silence Interval (sec)</label>
+                    <span id="cfg-silence-interval" class="config-value">—</span>
+                </fieldset>
+            </div>
         </section>
     </main>
 
