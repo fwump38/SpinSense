@@ -3,7 +3,8 @@ ARG PYTHON_BASE=python:3.11-slim-bookworm
 # --- Stage 1: Build songrec CLI from source (no GUI dependencies) ---
 FROM rust:1-bookworm AS songrec-builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
     libasound2-dev \
     libclang-dev \
@@ -11,10 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsoup-3.0-dev \
     libssl-dev \
     pkg-config \
+    && pkg-config --modversion libsoup-3.0 \
+    && cargo install songrec --no-default-features \
     && rm -rf /var/lib/apt/lists/*
-
-RUN export PKG_CONFIG_PATH="$(find /usr/lib /usr/local/lib -name 'libsoup-3.0.pc' -exec dirname {} \; 2>/dev/null | head -1):/usr/lib/$(gcc -dumpmachine)/pkgconfig:/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/share/pkgconfig" && \
-    cargo install songrec --no-default-features
 
 # --- Stage 2: Runtime image ---
 FROM ${PYTHON_BASE}
