@@ -53,8 +53,7 @@ jobs:
               uses: docker/build-push-action@v6
               with:
                   context: .
-                  file: ./docker/Dockerfile
-                  target: songrec-builder
+                  file: ./docker/Dockerfile.songrec-builder
                   platforms: ${{ matrix.platform }}
                   push: true
                   tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/songrec-builder:latest-${{ matrix.tag_suffix }}
