@@ -5,6 +5,8 @@
         "integration"
     ],
     "render_readme": true,
+    "zip_release": true,
+    "filename": "spinsense.zip",
     "homeassistant": "2026.3.0",
     "issue_tracker": "https://github.com/fwump38/SpinSense/issues",
     "documentation": "https://github.com/fwump38/SpinSense#readme"
