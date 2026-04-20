@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN PKG_CONFIG_PATH="/usr/lib/$(gcc -dumpmachine)/pkgconfig:/usr/share/pkgconfig" \
     cargo install songrec --no-default-features
+
+# --- Stage 2: Runtime image ---
+FROM ${PYTHON_BASE}
+
 LABEL maintainer="SpinSense Contributors"
 LABEL description="SpinSense - Turn Table integration for Home Assistant"
 
